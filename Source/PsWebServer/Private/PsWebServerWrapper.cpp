@@ -6,7 +6,6 @@
 #include "PsWebServerSettings.h"
 
 #include "civetweb/include/CivetServer.h"
-#include "civetweb/include/civetweb.h"
 
 // CivetWeb Example
 class ExampleHandler : public CivetHandler
@@ -21,6 +20,7 @@ public:
 		mg_printf(conn,
 			"<h2>This is an example text from a C++ handler</h2>\r\n");
 		mg_printf(conn, "</body></html>\r\n");
+
 		return true;
 	}
 };
@@ -43,6 +43,7 @@ void UPsWebServerWrapper::StartExampleServer()
 {
 	StartServer();
 
+	// Add static example handler
 	static ExampleHandler h_ex;
 	Server->addHandler("/example", h_ex);
 }
