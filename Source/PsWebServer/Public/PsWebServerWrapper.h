@@ -4,10 +4,9 @@
 
 #include "CoreUObject.h"
 
-#include "civetweb/include/CivetServer.h"
-#include "civetweb/include/civetweb.h"
-
 #include "PsWebServerWrapper.generated.h"
+
+class CivetServer;
 
 /**
  * CivetWeb server wrapper
@@ -20,8 +19,12 @@ class PSWEBSERVER_API UPsWebServerWrapper : public UObject
 	GENERATED_UCLASS_BODY()
 
 public:
+	/** Start server from civetweb examples */
+	UFUNCTION(BlueprintCallable, Category = "PsWebServerWrapper|Test")
+	void StartExampleServer();
+
 	/** Stop web server and unbind all handlers */
-	UFUNCTION(BlueprintCallable, Category = "PsCivetWebServer")
+	UFUNCTION(BlueprintCallable, Category = "PsWebServerWrapper")
 	void StopServer();
 
 private:
