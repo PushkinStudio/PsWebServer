@@ -13,8 +13,7 @@ class UPsWebServerLibrary : public UBlueprintFunctionLibrary
 {
 	GENERATED_UCLASS_BODY()
 
-	/** Web server wrapper accessor */
-	UFUNCTION(BlueprintCallable, BlueprintPure, Category = "PsWebServer")
-	static UPsWebServerWrapper* GetWebServer();
-
+	/** Create new web server wrapper */
+	UFUNCTION(BlueprintPure, meta = (DisplayName = "Create Web Server Wrapper"), Category = "PsWebServer")
+	static UPsWebServerWrapper* ConstructWebServerWrapper();
 };

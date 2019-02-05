@@ -2,30 +2,44 @@
 
 #include "PsWebServer.h"
 
-#include "PsWebServerWrapper.h"
+#include "PsWebServerSettings.h"
+
+#include "Developer/Settings/Public/ISettingsModule.h"
+#include "UObject/Package.h"
 
 #define LOCTEXT_NAMESPACE "FPsWebServerModule"
 
 void FPsWebServerModule::StartupModule()
 {
-	WebServer = NewObject<UPsWebServerWrapper>(GetTransientPackage());
-	WebServer->SetFlags(RF_Standalone);
-	WebServer->AddToRoot();
+	WebServerSettings = NewObject<UPsWebServerSettings>(GetTransientPackage(), "PsWebServerSettings", RF_Standalone);
+	WebServerSettings->AddToRoot();
+	WebServerSettings->Load();
+
+	// Register settings
+	if (ISettingsModule* SettingsModule = FModuleManager::GetModulePtr<ISettingsModule>("Settings"))
+	{
+		SettingsModule->RegisterSettings("Project", "Plugins", "PsWebServer",
+			LOCTEXT("RuntimeSettingsName", "PsWebServer"),
+			LOCTEXT("RuntimeSettingsDescription", "Configure web server"),
+			WebServerSettings);
+	}
 }
 
 void FPsWebServerModule::ShutdownModule()
 {
-	// Stop server first
-	WebServer->StopServer();
+	if (ISettingsModule* SettingsModule = FModuleManager::GetModulePtr<ISettingsModule>("Settings"))
+	{
+		SettingsModule->UnregisterSettings("Project", "Plugins", "PsWebServer");
+	}
 
 	if (!GExitPurge)
 	{
 		// If we're in exit purge, this object has already been destroyed
-		WebServer->RemoveFromRoot();
+		WebServerSettings->RemoveFromRoot();
 	}
 	else
 	{
-		WebServer = nullptr;
+		WebServerSettings = nullptr;
 	}
 }
 

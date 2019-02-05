@@ -4,7 +4,7 @@
 
 #include "Modules/ModuleManager.h"
 
-class UPsWebServerWrapper;
+class UPsWebServerSettings;
 
 class FPsWebServerModule : public IModuleInterface
 {
@@ -34,7 +34,7 @@ public:
 		return FModuleManager::Get().IsModuleLoaded("PsWebServer");
 	}
 
-public:
-	/** Civet web server UE4 wrapper handler */
-	UPsWebServerWrapper* WebServer;
+private:
+	/** Holds the kit settings */
+	UPsWebServerSettings* WebServerSettings;
 };

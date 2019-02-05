@@ -18,10 +18,18 @@ class PSWEBSERVER_API UPsWebServerWrapper : public UObject
 {
 	GENERATED_UCLASS_BODY()
 
+	//~ Begin UObject Interface
+	virtual void BeginDestroy() override;
+	//~ End UObject Interface
+
 public:
 	/** Start server from civetweb examples */
 	UFUNCTION(BlueprintCallable, Category = "PsWebServerWrapper|Test")
 	void StartExampleServer();
+
+	/** Start web server */
+	UFUNCTION(BlueprintCallable, Category = "PsWebServerWrapper")
+	void StartServer();
 
 	/** Stop web server and unbind all handlers */
 	UFUNCTION(BlueprintCallable, Category = "PsWebServerWrapper")

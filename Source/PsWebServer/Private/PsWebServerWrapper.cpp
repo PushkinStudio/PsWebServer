@@ -3,6 +3,7 @@
 #include "PsWebServerWrapper.h"
 
 #include "PsWebServerDefines.h"
+#include "PsWebServerSettings.h"
 
 #include "civetweb/include/CivetServer.h"
 #include "civetweb/include/civetweb.h"
@@ -62,6 +63,13 @@ UPsWebServerWrapper::UPsWebServerWrapper(const class FObjectInitializer& ObjectI
 	Server = nullptr;
 }
 
+void UPsWebServerWrapper::BeginDestroy()
+{
+	StopServer();
+
+	Super::BeginDestroy();
+}
+
 void UPsWebServerWrapper::StartExampleServer()
 {
 	const char* options[] = {"document_root", DOCUMENT_ROOT, "listening_ports", PORT, 0};
@@ -87,6 +95,55 @@ void UPsWebServerWrapper::StartExampleServer()
 	printf("Run example at http://localhost:%s%s\n", PORT, EXAMPLE_URI);
 }
 
+void UPsWebServerWrapper::StartServer()
+{
+	const UPsWebServerSettings* ServerSettings = GetDefault<UPsWebServerSettings>();
+	check(ServerSettings);
+
+	FString ServerURL = ServerSettings->ServerAddress;
+	if (ServerSettings->ServerPort != 0)
+	{
+		ServerURL.Append(TEXT(":") + FString::FromInt(ServerSettings->ServerPort));
+	}
+
+	std::vector<std::string> cpp_options;
+	cpp_options.push_back("listening_ports");
+	cpp_options.push_back(TCHAR_TO_ANSI(*ServerURL));
+
+	if (ServerSettings->bEnableKeepAlive)
+	{
+		cpp_options.push_back("enable_keep_alive");
+		cpp_options.push_back("yes");
+		cpp_options.push_back("keep_alive_timeout_ms");
+		cpp_options.push_back(TCHAR_TO_ANSI(*FString::FromInt(ServerSettings->KeepAliveTimeout)));
+	}
+	else
+	{
+		cpp_options.push_back("enable_keep_alive");
+		cpp_options.push_back("no");
+		cpp_options.push_back("keep_alive_timeout_ms");
+		cpp_options.push_back("0");
+	}
+
+	// Stop server first if one already exists
+	if (Server)
+	{
+		UE_LOG(LogPwsAll, Warning, TEXT("%s: Existing CivetWeb server instance found, stop it now"), *PS_FUNC_LINE);
+		StopServer();
+	}
+
+	// Run new civet instance
+	Server = new CivetServer(cpp_options);
+
+	// Check that we're really running now
+	if (Server->getContext() == nullptr)
+	{
+		UE_LOG(LogPwsAll, Fatal, TEXT("%s: Failed to run CivetWeb server instance"), *PS_FUNC_LINE);
+	}
+
+	UE_LOG(LogPwsAll, Log, TEXT("%s: CivetWeb server instance started on: %s"), *PS_FUNC_LINE, *ServerURL);
+}
+
 void UPsWebServerWrapper::StopServer()
 {
 	if (Server)
@@ -95,5 +152,7 @@ void UPsWebServerWrapper::StopServer()
 
 		delete Server;
 		Server = nullptr;
+
+		UE_LOG(LogPwsAll, Log, TEXT("%s: CivetWeb server instance stopped"), *PS_FUNC_LINE);
 	}
 }
