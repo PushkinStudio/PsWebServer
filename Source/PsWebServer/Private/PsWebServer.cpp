@@ -2,17 +2,28 @@
 
 #include "PsWebServer.h"
 
+#include "PsCivetWebServer.h"
+
 #define LOCTEXT_NAMESPACE "FPsWebServerModule"
 
 void FPsWebServerModule::StartupModule()
 {
-	// This code will execute after your module is loaded into memory; the exact timing is specified in the .uplugin file per-module
+	WebServer = NewObject<UPsCivetWebServer>(GetTransientPackage());
+	WebServer->SetFlags(RF_Standalone);
+	WebServer->AddToRoot();
 }
 
 void FPsWebServerModule::ShutdownModule()
 {
-	// This function may be called during shutdown to clean up your module.  For modules that support dynamic reloading,
-	// we call this function before unloading the module.
+	if (!GExitPurge)
+	{
+		// If we're in exit purge, this object has already been destroyed
+		WebServer->RemoveFromRoot();
+	}
+	else
+	{
+		WebServer = nullptr;
+	}
 }
 
 #undef LOCTEXT_NAMESPACE

@@ -17,7 +17,7 @@
 UCLASS()
 class PSWEBSERVER_API UPsCivetWebServer : public UObject
 {
-	GENERATED_BODY()
+	GENERATED_UCLASS_BODY()
 
 public:
 private:
