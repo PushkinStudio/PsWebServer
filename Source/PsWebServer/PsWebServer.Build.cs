@@ -8,6 +8,14 @@ public class PsWebServer : ModuleRules
     {
         PCHUsage = ModuleRules.PCHUsageMode.UseExplicitOrSharedPCHs;
 
+        PrivateIncludePaths.AddRange(
+            new string[] {
+                "PsWebServer/Private",
+                "PsWebServer/Private/civetweb",
+                "PsWebServer/Private/civetweb/include",
+            }
+        );
+
         PublicIncludePaths.AddRange(
             new string[] {
 				// ... add public include paths required here ...
