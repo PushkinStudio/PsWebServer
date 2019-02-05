@@ -10,8 +10,8 @@
 UPsWebServerSettings::UPsWebServerSettings(const FObjectInitializer& ObjectInitializer)
 	: Super(ObjectInitializer)
 {
-	ServerAddress = FString("localhost");
-	ServerPort = 2450;
+	ServerAddress = FString("127.0.0.1");
+	ServerPort = 2050;
 
 	bEnableKeepAlive = false;
 	KeepAliveTimeout = 5000;
