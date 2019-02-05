@@ -4,7 +4,7 @@
 
 #include "Modules/ModuleManager.h"
 
-class UPsCivetWebServer;
+class UPsWebServerWrapper;
 
 class FPsWebServerModule : public IModuleInterface
 {
@@ -36,5 +36,5 @@ public:
 
 public:
 	/** Civet web server UE4 wrapper handler */
-	UPsCivetWebServer* WebServer;
+	UPsWebServerWrapper* WebServer;
 };

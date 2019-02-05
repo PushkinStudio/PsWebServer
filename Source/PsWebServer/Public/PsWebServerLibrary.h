@@ -6,7 +6,7 @@
 
 #include "PsWebServerLibrary.generated.h"
 
-class UPsCivetWebServer;
+class UPsWebServerWrapper;
 
 UCLASS()
 class UPsWebServerLibrary : public UBlueprintFunctionLibrary
@@ -14,5 +14,5 @@ class UPsWebServerLibrary : public UBlueprintFunctionLibrary
 	GENERATED_UCLASS_BODY()
 
 	UFUNCTION(BlueprintCallable, BlueprintPure, Category = "PsWebServer")
-	static UPsCivetWebServer* GetWebServer();
+	static UPsWebServerWrapper* GetWebServer();
 };

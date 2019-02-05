@@ -2,14 +2,14 @@
 
 #include "PsWebServerLibrary.h"
 
-#include "PsWebServer.h"
+#include "PsWebServerWrapper.h"
 
 UPsWebServerLibrary::UPsWebServerLibrary(const FObjectInitializer& ObjectInitializer)
 	: Super(ObjectInitializer)
 {
 }
 
-UPsCivetWebServer* UPsWebServerLibrary::GetWebServer()
+UPsWebServerWrapper* UPsWebServerLibrary::GetWebServer()
 {
 	return FPsWebServerModule::Get().WebServer;
 }
