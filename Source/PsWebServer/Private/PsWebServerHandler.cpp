@@ -6,6 +6,9 @@
 #include "PsWebServerSettings.h"
 #include "PsWebServerWrapper.h"
 
+#include "HAL/CriticalSection.h"
+#include "Misc/ScopeLock.h"
+
 WebServerHandler::WebServerHandler()
 {
 	RequestTimeout = 0;
@@ -16,16 +19,21 @@ bool WebServerHandler::handlePost(CivetServer* server, struct mg_connection* con
 	// Create async event waiter
 	FEvent* RequestReadyEvent = FGenericPlatformProcess::GetSynchEventFromPool();
 
+	// Generate unique for request processor
+	const FGuid RequestUniqueId = FGuid::NewGuid();
+	{
+		FScopeLock Lock(&CriticalSection);
+		ResponseDatas.Add(RequestUniqueId);
+	}
+
 	// Prepare vars for lambda
 	TWeakObjectPtr<UPsWebServerHandler> RequestHandler = OwnerHandler;
+	TSharedPtr<FString, ESPMode::ThreadSafe> PostData = MakeShareable(new FString(CivetServer::getPostData(conn).c_str()));
 
-	std::string Data = CivetServer::getPostData(conn);
-	TSharedPtr<FString, ESPMode::ThreadSafe> PostData = MakeShareable(new FString(Data.c_str()));
-
-	AsyncTask(ENamedThreads::GameThread, [RequestHandler, PostData, RequestReadyEvent]() {
+	AsyncTask(ENamedThreads::GameThread, [RequestHandler, RequestUniqueId, PostData, RequestReadyEvent]() {
 		if (RequestHandler.IsValid())
 		{
-			RequestHandler.Get()->ProcessRequest((PostData.IsValid()) ? *PostData.Get() : FString());
+			RequestHandler.Get()->ProcessRequest(RequestUniqueId, *PostData.Get());
 		}
 
 		// @TODO Test long event processing here (more than RequestTimeout)
@@ -33,29 +41,58 @@ bool WebServerHandler::handlePost(CivetServer* server, struct mg_connection* con
 	});
 
 	// Wait for event or timeout
-	bool EventTriggered = RequestReadyEvent->Wait(RequestTimeout > 0 ? RequestTimeout : 2000);
+	int32 WaitTime = RequestTimeout;
+	bool EventTriggered = RequestReadyEvent->Wait(WaitTime > 0 ? WaitTime : 2000);
 	FGenericPlatformProcess::ReturnSynchEventToPool(RequestReadyEvent);
 
-	// Temporary example for now
-	const char* msg = "Hello world";
-	unsigned long len = (unsigned long)strlen(msg);
+	// Fetch response data
+	std::string OutputDataBody("{}");
+	{
+		FScopeLock Lock(&CriticalSection);
+		OutputDataBody = std::string(TCHAR_TO_UTF8(*ResponseDatas.FindAndRemoveChecked(RequestUniqueId)));
+	}
 
-	mg_printf(conn,
-		"HTTP/1.1 200 OK\r\n"
-		"Content-Length: %lu\r\n"
-		"Content-Type: text/plain\r\n"
-		"Connection: close\r\n\r\n",
-		len);
+	// @TODO Should be more elegant and externally controlled
+	FString ReplyCode = TEXT("200 OK");
+	FString ContentType = TEXT("application/json");
 
-	mg_write(conn, msg, len);
+	FString ResponseHeader = FString::Printf(TEXT("HTTP/1.1 %s\r\n"
+												  "Server: Pushkin Web Server\r\n"
+												  "Content-Type: %s\r\n"
+												  "Content-Length: %d\r\n"
+												  "Connection: keep-alive\r\n"
+												  "\r\n"),
+		*ReplyCode, *ContentType, (int32)OutputDataBody.size());
+
+	std::string OutputDataHeader = std::string(TCHAR_TO_UTF8(*ResponseHeader));
+
+	mg_printf(conn, "%s", OutputDataHeader.c_str());
+	int32 NumWritten = mg_write(conn, OutputDataBody.c_str(), OutputDataBody.size());
 
 	return true;
 }
 
 bool WebServerHandler::handleGet(CivetServer* server, struct mg_connection* conn)
 {
-	// Temporary solution for dev purposes
-	return handlePost(server, conn);
+	// We support only POST for now
+	return false;
+}
+
+bool WebServerHandler::SetResponseData(const FGuid& RequestUniqueId, const FString& ResponseData)
+{
+	FScopeLock Lock(&CriticalSection);
+
+	if (ResponseDatas.Contains(RequestUniqueId))
+	{
+		ResponseDatas.Emplace(RequestUniqueId, ResponseData);
+		return true;
+	}
+	else
+	{
+		UE_LOG(LogPwsAll, Error, TEXT("%s: No GUID %s is found for data: %s"), *PS_FUNC_LINE, *RequestUniqueId.ToString(), *ResponseData);
+	}
+
+	return false;
 }
 
 UPsWebServerHandler::UPsWebServerHandler(const class FObjectInitializer& ObjectInitializer)
@@ -112,7 +149,12 @@ bool UPsWebServerHandler::BindHandler(UPsWebServerWrapper* ServerWrapper, const 
 	return true;
 }
 
-void UPsWebServerHandler::ProcessRequest_Implementation(const FString& RequestData)
+void UPsWebServerHandler::ProcessRequest_Implementation(const FGuid& RequestUniqueId, const FString& RequestData)
 {
 	UE_LOG(LogPwsAll, Warning, TEXT("%s: Override me"), *PS_FUNC_LINE);
+}
+
+bool UPsWebServerHandler::SetResponseData_Implementation(const FGuid& RequestUniqueId, const FString& ResponseData)
+{
+	return Handler.SetResponseData(RequestUniqueId, ResponseData);
 }

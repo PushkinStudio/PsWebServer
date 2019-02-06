@@ -12,23 +12,6 @@ class UPsWebServerHandler;
 class UPsWebServerWrapper;
 
 /**
- * Simple struct to share request result between threads 
- */
-struct FRequestResult
-{
-public:
-	FString ReplyCode;
-	FString ContentType;
-	FString Data;
-
-	FRequestResult()
-	{
-		ReplyCode = FString("200 OK");
-		ContentType = "application/json";
-	}
-};
-
-/**
  * Native C++ wrapper to connect civet and ue4 
  */
 class WebServerHandler : public CivetHandler
@@ -39,12 +22,22 @@ public:
 	bool handlePost(CivetServer* server, struct mg_connection* conn);
 	bool handleGet(CivetServer* server, struct mg_connection* conn);
 
+	/** Called from game thread to fill the data */
+	bool SetResponseData(const FGuid& RequestUniqueId, const FString& ResponseData);
+
 public:
 	/** Timeout in msec for the entire http request to complete (see UPsWebServerSettings::RequestTimeout)*/
-	int32 RequestTimeout;
+	TAtomic<int32> RequestTimeout;
 
 	/** Parent processing object that lives in GameThread */
 	TWeakObjectPtr<UPsWebServerHandler> OwnerHandler;
+
+private:
+	/** Critical section used to lock the request data for access */
+	FCriticalSection CriticalSection;
+
+	/** Internal container for cached response data from game thread */
+	TMap<FGuid, FString> ResponseDatas;
 };
 
 UCLASS(Blueprintable, BlueprintType)
@@ -61,16 +54,17 @@ public:
 	bool BindHandler(UPsWebServerWrapper* ServerWrapper, const FString& URI);
 
 	UFUNCTION(BlueprintNativeEvent, Category = "PsWebServer|Handler")
-	void ProcessRequest(const FString& RequestData);
+	void ProcessRequest(const FGuid& RequestUniqueId, const FString& RequestData);
 
-public:
-	/** Stores result after request processing */
-	TSharedPtr<FRequestResult, ESPMode::ThreadSafe> RequestResult;
+	/** Override it if you want to have any data validation level */
+	UFUNCTION(BlueprintNativeEvent, Category = "PsWebServer|Handler")
+	bool SetResponseData(const FGuid& RequestUniqueId, const FString& ResponseData);
 
-private:
+protected:
 	/** Interlal civet-based handler for uri */
 	WebServerHandler Handler;
 
+private:
 	/** Cached handler URI */
 	FString HandlerURI;
 
