@@ -19,14 +19,16 @@ bool WebServerHandler::handlePost(CivetServer* server, struct mg_connection* con
 	// Prepare vars for lambda
 	TWeakObjectPtr<UPsWebServerHandler> RequestHandler = OwnerHandler;
 
-	AsyncTask(ENamedThreads::GameThread, [RequestHandler, RequestReadyEvent]() {
+	std::string Data = CivetServer::getPostData(conn);
+	TSharedPtr<FString, ESPMode::ThreadSafe> PostData = MakeShareable(new FString(Data.c_str()));
+
+	AsyncTask(ENamedThreads::GameThread, [RequestHandler, PostData, RequestReadyEvent]() {
 		if (RequestHandler.IsValid())
 		{
-			RequestHandler.Get()->ProcessPost();
+			RequestHandler.Get()->ProcessRequest((PostData.IsValid()) ? *PostData.Get() : FString());
 		}
 
-		// @TODO Test long event processing here
-
+		// @TODO Test long event processing here (more than RequestTimeout)
 		RequestReadyEvent->Trigger();
 	});
 
@@ -65,8 +67,13 @@ void UPsWebServerHandler::BeginDestroy()
 {
 	if (Wrapper.IsValid())
 	{
-		Wrapper.Get()->GetServer()->removeHandler(TCHAR_TO_ANSI(*HandlerURI));
+		if (Wrapper.Get()->GetServer())
+		{
+			Wrapper.Get()->GetServer()->removeHandler(TCHAR_TO_ANSI(*HandlerURI));
+		}
 	}
+
+	Super::BeginDestroy();
 }
 
 bool UPsWebServerHandler::BindHandler(UPsWebServerWrapper* ServerWrapper, const FString& URI)
@@ -74,6 +81,12 @@ bool UPsWebServerHandler::BindHandler(UPsWebServerWrapper* ServerWrapper, const 
 	if (ServerWrapper == nullptr)
 	{
 		UE_LOG(LogPwsAll, Error, TEXT("%s: Can't bind hadler: invalid ServerWrapper"), *PS_FUNC_LINE);
+		return false;
+	}
+
+	if (ServerWrapper->GetServer() == nullptr)
+	{
+		UE_LOG(LogPwsAll, Error, TEXT("%s: Can't bind hadler: you should run server first"), *PS_FUNC_LINE);
 		return false;
 	}
 
@@ -99,7 +112,7 @@ bool UPsWebServerHandler::BindHandler(UPsWebServerWrapper* ServerWrapper, const 
 	return true;
 }
 
-void UPsWebServerHandler::ProcessPost()
+void UPsWebServerHandler::ProcessRequest_Implementation(const FString& RequestData)
 {
 	UE_LOG(LogPwsAll, Warning, TEXT("%s: Override me"), *PS_FUNC_LINE);
 }

@@ -13,7 +13,7 @@ class CivetServer;
  *
  * Based on https://github.com/civetweb/civetweb/commit/b21ca4a0a6b54c1ee1223be1f6a823640f1b2c50 commit
  */
-UCLASS()
+UCLASS(BlueprintType)
 class PSWEBSERVER_API UPsWebServerWrapper : public UObject
 {
 	GENERATED_UCLASS_BODY()
@@ -24,15 +24,15 @@ class PSWEBSERVER_API UPsWebServerWrapper : public UObject
 
 public:
 	/** Start server from civetweb examples */
-	UFUNCTION(BlueprintCallable, Category = "PsWebServerWrapper|Test")
+	UFUNCTION(BlueprintCallable, Category = "PsWebServer|Test")
 	void StartExampleServer();
 
 	/** Start web server */
-	UFUNCTION(BlueprintCallable, Category = "PsWebServerWrapper")
+	UFUNCTION(BlueprintCallable, Category = "PsWebServer")
 	void StartServer();
 
 	/** Stop web server and unbind all handlers */
-	UFUNCTION(BlueprintCallable, Category = "PsWebServerWrapper")
+	UFUNCTION(BlueprintCallable, Category = "PsWebServer")
 	void StopServer();
 
 	/** Internal server getter */
