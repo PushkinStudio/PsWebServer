@@ -1,6 +1,7 @@
 // Copyright 2015-2019 Mail.Ru Group. All Rights Reserved.
 
 using UnrealBuildTool;
+using System.IO;
 
 public class PsWebServer : ModuleRules
 {
@@ -18,8 +19,10 @@ public class PsWebServer : ModuleRules
 
         PublicIncludePaths.AddRange(
             new string[] {
-				// ... add public include paths required here ...
-			}
+                Path.Combine(ModuleDirectory, "Private"),
+                Path.Combine(ModuleDirectory, "Private/civetweb"),
+                Path.Combine(ModuleDirectory, "Private/civetweb/include"),
+            }
             );
 
 

@@ -14,7 +14,7 @@ class UPsWebServerWrapper;
 /**
  * Native C++ wrapper to connect civet and ue4 
  */
-class WebServerHandler : public CivetHandler
+class PSWEBSERVER_API WebServerHandler : public CivetHandler
 {
 public:
 	WebServerHandler();
