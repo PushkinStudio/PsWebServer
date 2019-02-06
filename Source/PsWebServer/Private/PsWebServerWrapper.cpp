@@ -109,3 +109,8 @@ void UPsWebServerWrapper::StopServer()
 		UE_LOG(LogPwsAll, Log, TEXT("%s: CivetWeb server instance stopped"), *PS_FUNC_LINE);
 	}
 }
+
+CivetServer* UPsWebServerWrapper::GetServer()
+{
+	return Server;
+}

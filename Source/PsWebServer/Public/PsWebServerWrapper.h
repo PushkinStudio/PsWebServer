@@ -35,6 +35,9 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "PsWebServerWrapper")
 	void StopServer();
 
+	/** Internal server getter */
+	CivetServer* GetServer();
+
 private:
 	/** Native CivetWeb C++ wrapper */
 	CivetServer* Server;
