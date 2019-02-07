@@ -31,10 +31,10 @@ bool WebServerHandler::handlePost(CivetServer* server, struct mg_connection* con
 	TWeakObjectPtr<UPsWebServerHandler> RequestHandler = OwnerHandler;
 	FString PostData = CivetServer::getPostData(conn).c_str();
 
-	AsyncTask(ENamedThreads::GameThread, [RequestHandler, RequestUniqueId, PostData, RequestReadyEvent]() {
+	AsyncTask(ENamedThreads::GameThread, [RequestHandler, RequestUniqueId, PostData = std::move(PostData), RequestReadyEvent]() {
 		if (RequestHandler.IsValid())
 		{
-			RequestHandler.Get()->ProcessRequest(RequestUniqueId, *PostData);
+			RequestHandler.Get()->ProcessRequest(RequestUniqueId, PostData);
 		}
 
 		// @TODO Test long event processing here (more than RequestTimeout)
