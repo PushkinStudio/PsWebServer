@@ -29,12 +29,12 @@ bool WebServerHandler::handlePost(CivetServer* server, struct mg_connection* con
 
 	// Prepare vars for lambda
 	TWeakObjectPtr<UPsWebServerHandler> RequestHandler = OwnerHandler;
-	TSharedPtr<FString, ESPMode::ThreadSafe> PostData = MakeShareable(new FString(CivetServer::getPostData(conn).c_str()));
+	FString PostData = CivetServer::getPostData(conn).c_str();
 
 	AsyncTask(ENamedThreads::GameThread, [RequestHandler, RequestUniqueId, PostData, RequestReadyEvent]() {
 		if (RequestHandler.IsValid())
 		{
-			RequestHandler.Get()->ProcessRequest(RequestUniqueId, *PostData.Get());
+			RequestHandler.Get()->ProcessRequest(RequestUniqueId, *PostData);
 		}
 
 		// @TODO Test long event processing here (more than RequestTimeout)
