@@ -43,16 +43,14 @@ private:
 UCLASS(Blueprintable, BlueprintType)
 class PSWEBSERVER_API UPsWebServerHandler : public UObject
 {
-	GENERATED_UCLASS_BODY()
+	GENERATED_BODY()
 
 public:
 	//~ Begin UObject Interface
 	virtual void BeginDestroy() override;
 	//~ End UObject Interface
 
-	UFUNCTION(BlueprintCallable, Category = "PsWebServer|Handler")
-	bool BindHandler(UPsWebServerWrapper* ServerWrapper, const FString& URI);
-
+	/** Override it with custom processing logic */
 	UFUNCTION(BlueprintNativeEvent, Category = "PsWebServer|Handler")
 	void ProcessRequest(const FGuid& RequestUniqueId, const FString& RequestData);
 
@@ -60,11 +58,23 @@ public:
 	UFUNCTION(BlueprintNativeEvent, Category = "PsWebServer|Handler")
 	bool SetResponseData(const FGuid& RequestUniqueId, const FString& ResponseData);
 
+	/** Get HandlerURI value */
+	UFUNCTION(BlueprintCallable, Category = "PsWebServer")
+	FString GetURI() const;
+
 protected:
+	/** Handler reference accessor */
+	WebServerHandler& GetHandler();
+
+	/** Called from wrapped to bind handler to server */
+	bool BindHandler(UPsWebServerWrapper* ServerWrapper, const FString& URI);
+
+	friend class UPsWebServerWrapper;
+
+private:
 	/** Interlal civet-based handler for uri */
 	WebServerHandler Handler;
 
-private:
 	/** Cached handler URI */
 	FString HandlerURI;
 

@@ -7,6 +7,7 @@
 #include "PsWebServerWrapper.generated.h"
 
 class CivetServer;
+class UPsWebServerHandler;
 
 /**
  * CivetWeb server wrapper
@@ -35,10 +36,22 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "PsWebServer")
 	void StopServer();
 
+	/** Add new handler to process URI */
+	UFUNCTION(BlueprintCallable, Category = "PsWebServer")
+	bool AddHandler(UPsWebServerHandler* Handler, const FString& URI);
+
+	/** Remove handler from URI */
+	UFUNCTION(BlueprintCallable, Category = "PsWebServer")
+	bool RemoveHandler(const FString& URI);
+
 	/** Internal server getter */
 	CivetServer* GetServer();
 
 private:
 	/** Native CivetWeb C++ wrapper */
 	CivetServer* Server;
+
+	/** All added handlers <URI, Handler> */
+	UPROPERTY()
+	TMap<FString, UPsWebServerHandler*> BinnedHandlers;
 };

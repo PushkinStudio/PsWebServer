@@ -3,6 +3,7 @@
 #include "PsWebServerWrapper.h"
 
 #include "PsWebServerDefines.h"
+#include "PsWebServerHandler.h"
 #include "PsWebServerSettings.h"
 
 #include "civetweb/include/CivetServer.h"
@@ -108,6 +109,40 @@ void UPsWebServerWrapper::StopServer()
 
 		UE_LOG(LogPwsAll, Log, TEXT("%s: CivetWeb server instance stopped"), *PS_FUNC_LINE);
 	}
+}
+
+bool UPsWebServerWrapper::AddHandler(UPsWebServerHandler* Handler, const FString& URI)
+{
+	// Remove previous handler if we had one
+	RemoveHandler(URI);
+
+	if (Handler->BindHandler(this, URI))
+	{
+		BinnedHandlers.Emplace(URI, Handler);
+
+		UE_LOG(LogPwsAll, Log, TEXT("%s: Handler successfully added for URI: %s"), *PS_FUNC_LINE, *URI);
+		return true;
+	}
+
+	return false;
+}
+
+bool UPsWebServerWrapper::RemoveHandler(const FString& URI)
+{
+	if (Server)
+	{
+		if (BinnedHandlers.Contains(URI))
+		{
+			BinnedHandlers.Remove(URI);
+		}
+
+		// Remove handler from civet anyway
+		Server->removeHandler(TCHAR_TO_ANSI(*URI));
+
+		return true;
+	}
+
+	return false;
 }
 
 CivetServer* UPsWebServerWrapper::GetServer()

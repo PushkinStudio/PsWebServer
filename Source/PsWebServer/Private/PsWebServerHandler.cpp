@@ -95,22 +95,34 @@ bool WebServerHandler::SetResponseData(const FGuid& RequestUniqueId, const FStri
 	return false;
 }
 
-UPsWebServerHandler::UPsWebServerHandler(const class FObjectInitializer& ObjectInitializer)
-	: Super(ObjectInitializer)
-{
-}
-
 void UPsWebServerHandler::BeginDestroy()
 {
 	if (Wrapper.IsValid())
 	{
-		if (Wrapper.Get()->GetServer())
-		{
-			Wrapper.Get()->GetServer()->removeHandler(TCHAR_TO_ANSI(*HandlerURI));
-		}
+		Wrapper.Get()->RemoveHandler(HandlerURI);
 	}
 
 	Super::BeginDestroy();
+}
+
+void UPsWebServerHandler::ProcessRequest_Implementation(const FGuid& RequestUniqueId, const FString& RequestData)
+{
+	UE_LOG(LogPwsAll, Warning, TEXT("%s: Override me"), *PS_FUNC_LINE);
+}
+
+bool UPsWebServerHandler::SetResponseData_Implementation(const FGuid& RequestUniqueId, const FString& ResponseData)
+{
+	return Handler.SetResponseData(RequestUniqueId, ResponseData);
+}
+
+FString UPsWebServerHandler::GetURI() const
+{
+	return HandlerURI;
+}
+
+WebServerHandler& UPsWebServerHandler::GetHandler()
+{
+	return Handler;
 }
 
 bool UPsWebServerHandler::BindHandler(UPsWebServerWrapper* ServerWrapper, const FString& URI)
@@ -147,14 +159,4 @@ bool UPsWebServerHandler::BindHandler(UPsWebServerWrapper* ServerWrapper, const 
 	ServerWrapper->GetServer()->addHandler(TCHAR_TO_ANSI(*HandlerURI), Handler);
 
 	return true;
-}
-
-void UPsWebServerHandler::ProcessRequest_Implementation(const FGuid& RequestUniqueId, const FString& RequestData)
-{
-	UE_LOG(LogPwsAll, Warning, TEXT("%s: Override me"), *PS_FUNC_LINE);
-}
-
-bool UPsWebServerHandler::SetResponseData_Implementation(const FGuid& RequestUniqueId, const FString& ResponseData)
-{
-	return Handler.SetResponseData(RequestUniqueId, ResponseData);
 }
