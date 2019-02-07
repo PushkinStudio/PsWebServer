@@ -20,6 +20,8 @@
  * THE SOFTWARE.
  */
 
+// clang-format off
+
 #ifndef CIVETWEB_HEADER_INCLUDED
 #define CIVETWEB_HEADER_INCLUDED
 

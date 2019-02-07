@@ -4,6 +4,8 @@
  * License http://opensource.org/licenses/mit-license.php MIT License
  */
 
+// clang-format off
+
 #ifndef _CIVETWEB_SERVER_H_
 #define _CIVETWEB_SERVER_H_
 #ifdef __cplusplus

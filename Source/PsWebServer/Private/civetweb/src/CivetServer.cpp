@@ -4,6 +4,8 @@
  * License http://opensource.org/licenses/mit-license.php MIT License
  */
 
+// clang-format off
+
 #include "CivetServer.h"
 
 #include <assert.h>
