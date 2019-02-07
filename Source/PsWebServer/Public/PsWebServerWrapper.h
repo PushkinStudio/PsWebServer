@@ -53,12 +53,9 @@ private:
 	TMap<FString, UPsWebServerHandler*> BinnedHandlers;
 
 #if WITH_CIVET
-public:
-	/** Internal server getter */
-	CivetServer* GetServer();
-
 private:
 	/** Native CivetWeb C++ wrapper */
-	CivetServer* Server;
+	TUniquePtr<CivetServer> Server;
+	friend class UPsWebServerHandler;
 #endif
 };

@@ -137,7 +137,7 @@ bool UPsWebServerHandler::BindHandler(UPsWebServerWrapper* ServerWrapper, const 
 		return false;
 	}
 
-	if (ServerWrapper->GetServer() == nullptr)
+	if (ServerWrapper->Server == nullptr)
 	{
 		UE_LOG(LogPwsAll, Error, TEXT("%s: Can't bind hadler: you should run server first"), *PS_FUNC_LINE);
 		return false;
@@ -160,7 +160,7 @@ bool UPsWebServerHandler::BindHandler(UPsWebServerWrapper* ServerWrapper, const 
 
 	// Bind handler to civet server internal instance
 	Handler.OwnerHandler = (const_cast<UPsWebServerHandler*>(this));
-	ServerWrapper->GetServer()->addHandler(TCHAR_TO_ANSI(*HandlerURI), Handler);
+	ServerWrapper->Server->addHandler(TCHAR_TO_ANSI(*HandlerURI), Handler);
 
 	return true;
 #else

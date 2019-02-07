@@ -94,7 +94,7 @@ void UPsWebServerWrapper::StartServer()
 	}
 
 	// Run new civet instance
-	Server = new CivetServer(cpp_options);
+	Server = MakeUnique<CivetServer>(cpp_options);
 
 	// Check that we're really running now
 	if (Server->getContext() == nullptr)
@@ -114,8 +114,6 @@ void UPsWebServerWrapper::StopServer()
 	if (Server)
 	{
 		Server->close();
-
-		delete Server;
 		Server = nullptr;
 
 		UE_LOG(LogPwsAll, Log, TEXT("%s: CivetWeb server instance stopped"), *PS_FUNC_LINE);
@@ -160,10 +158,3 @@ bool UPsWebServerWrapper::RemoveHandler(const FString& URI)
 
 	return false;
 }
-
-#if WITH_CIVET
-CivetServer* UPsWebServerWrapper::GetServer()
-{
-	return Server;
-}
-#endif // WITH_CIVET

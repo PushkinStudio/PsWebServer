@@ -71,8 +71,6 @@ public:
 	/** Called from wrapped to bind handler to server */
 	bool BindHandler(UPsWebServerWrapper* ServerWrapper, const FString& URI);
 
-	friend class UPsWebServerWrapper;
-
 private:
 	/** Cached handler URI */
 	FString HandlerURI;
