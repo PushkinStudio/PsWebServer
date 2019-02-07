@@ -2,7 +2,9 @@
 
 #pragma once
 
+#if WITH_CIVET
 #include "civetweb/include/CivetServer.h"
+#endif
 
 #include "CoreMinimal.h"
 
@@ -10,6 +12,8 @@
 
 class UPsWebServerHandler;
 class UPsWebServerWrapper;
+
+#if WITH_CIVET
 
 /**
  * Native C++ wrapper to connect civet and ue4 
@@ -40,6 +44,8 @@ private:
 	TMap<FGuid, FString> ResponseDatas;
 };
 
+#endif // WITH_CIVET
+
 UCLASS(Blueprintable, BlueprintType)
 class PSWEBSERVER_API UPsWebServerHandler : public UObject
 {
@@ -62,22 +68,21 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "PsWebServer")
 	FString GetURI() const;
 
-protected:
-	/** Handler reference accessor */
-	WebServerHandler& GetHandler();
-
 	/** Called from wrapped to bind handler to server */
 	bool BindHandler(UPsWebServerWrapper* ServerWrapper, const FString& URI);
 
 	friend class UPsWebServerWrapper;
 
 private:
-	/** Interlal civet-based handler for uri */
-	WebServerHandler Handler;
-
 	/** Cached handler URI */
 	FString HandlerURI;
 
 	/** Weak pointer to server used for handler binding */
 	TWeakObjectPtr<UPsWebServerWrapper> Wrapper;
+
+#if WITH_CIVET
+private:
+	/** Interlal civet-based handler for uri */
+	WebServerHandler Handler;
+#endif // WITH_CIVET
 };

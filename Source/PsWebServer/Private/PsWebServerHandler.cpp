@@ -9,6 +9,7 @@
 #include "HAL/CriticalSection.h"
 #include "Misc/ScopeLock.h"
 
+#if WITH_CIVET
 WebServerHandler::WebServerHandler()
 {
 	RequestTimeout = 0;
@@ -94,13 +95,16 @@ bool WebServerHandler::SetResponseData(const FGuid& RequestUniqueId, const FStri
 
 	return false;
 }
+#endif // WITH_CIVET
 
 void UPsWebServerHandler::BeginDestroy()
 {
+#if WITH_CIVET
 	if (Wrapper.IsValid())
 	{
 		Wrapper.Get()->RemoveHandler(HandlerURI);
 	}
+#endif
 
 	Super::BeginDestroy();
 }
@@ -112,7 +116,11 @@ void UPsWebServerHandler::ProcessRequest_Implementation(const FGuid& RequestUniq
 
 bool UPsWebServerHandler::SetResponseData_Implementation(const FGuid& RequestUniqueId, const FString& ResponseData)
 {
+#if WITH_CIVET
 	return Handler.SetResponseData(RequestUniqueId, ResponseData);
+#else
+	return false;
+#endif
 }
 
 FString UPsWebServerHandler::GetURI() const
@@ -120,13 +128,9 @@ FString UPsWebServerHandler::GetURI() const
 	return HandlerURI;
 }
 
-WebServerHandler& UPsWebServerHandler::GetHandler()
-{
-	return Handler;
-}
-
 bool UPsWebServerHandler::BindHandler(UPsWebServerWrapper* ServerWrapper, const FString& URI)
 {
+#if WITH_CIVET
 	if (ServerWrapper == nullptr)
 	{
 		UE_LOG(LogPwsAll, Error, TEXT("%s: Can't bind hadler: invalid ServerWrapper"), *PS_FUNC_LINE);
@@ -159,4 +163,9 @@ bool UPsWebServerHandler::BindHandler(UPsWebServerWrapper* ServerWrapper, const 
 	ServerWrapper->GetServer()->addHandler(TCHAR_TO_ANSI(*HandlerURI), Handler);
 
 	return true;
+#else
+	UE_LOG(LogPwsAll, Error, TEXT("%s: Civet is not supported"), *PS_FUNC_LINE);
+
+	return false;
+#endif // WITH_CIVET
 }

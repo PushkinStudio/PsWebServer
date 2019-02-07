@@ -60,5 +60,17 @@ public class PsWebServer : ModuleRules
 				// ... add any modules that your module loads dynamically here ...
 			}
             );
+
+        if ((Target.Platform == UnrealTargetPlatform.Win64) ||
+            (Target.Platform == UnrealTargetPlatform.Win32) ||
+            (Target.Platform == UnrealTargetPlatform.Mac) ||
+            (Target.Platform == UnrealTargetPlatform.Linux))
+        {
+            PublicDefinitions.Add("WITH_CIVET=1");
+        }
+        else
+        {
+            PublicDefinitions.Add("WITH_CIVET=0");
+        }
     }
 }
