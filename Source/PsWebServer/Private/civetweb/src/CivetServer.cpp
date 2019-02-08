@@ -8,6 +8,13 @@
 
 #include "CivetServer.h"
 
+// .c file is specific so we can't include PsWebServerDefines.h here
+#ifndef WITH_CIVET
+#define WITH_CIVET 0
+#endif
+
+#if WITH_CIVET
+
 #include <assert.h>
 #include <stdexcept>
 #include <stdlib.h>
@@ -660,3 +667,5 @@ CivetServer::CivetConnection::~CivetConnection()
 {
 	free(postData);
 }
+
+#endif // WITH_CIVET

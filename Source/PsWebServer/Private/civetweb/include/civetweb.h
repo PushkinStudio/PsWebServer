@@ -22,6 +22,13 @@
 
 // clang-format off
 
+// .c file is specific so we can't include PsWebServerDefines.h here
+#ifndef WITH_CIVET
+#define WITH_CIVET 0
+#endif
+
+#if WITH_CIVET
+
 #ifndef CIVETWEB_HEADER_INCLUDED
 #define CIVETWEB_HEADER_INCLUDED
 
@@ -1518,3 +1525,5 @@ CIVETWEB_API int mg_get_connection_info(const struct mg_context *ctx,
 #endif /* __cplusplus */
 
 #endif /* CIVETWEB_HEADER_INCLUDED */
+
+#endif // WITH_CIVET

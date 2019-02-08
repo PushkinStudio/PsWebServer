@@ -20,6 +20,15 @@
  * THE SOFTWARE.
  */
 
+// clang-format off
+
+// .c file is specific so we can't include PsWebServerDefines.h here
+#ifndef WITH_CIVET
+#define WITH_CIVET 0
+#endif
+
+#if WITH_CIVET
+
 #if defined(__GNUC__) || defined(__MINGW32__)
 #define GCC_VERSION                                                            \
 	(__GNUC__ * 10000 + __GNUC_MINOR__ * 100 + __GNUC_PATCHLEVEL__)
@@ -19774,5 +19783,6 @@ mg_exit_library(void)
 	return 1;
 }
 
+#endif // WITH_CIVET
 
 /* End of civetweb.c */
