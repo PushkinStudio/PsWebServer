@@ -26,7 +26,7 @@ public:
 	bool handlePost(CivetServer* server, struct mg_connection* conn);
 	bool handleGet(CivetServer* server, struct mg_connection* conn);
 
-	/** Called from game thread to fill the data */
+	void ProcessRequest(const FGuid& RequestUniqueId, const FString& RequestData);
 	bool SetResponseData(const FGuid& RequestUniqueId, const FString& ResponseData);
 
 public:
@@ -42,6 +42,9 @@ private:
 
 	/** Internal container for cached response data from game thread */
 	TMap<FGuid, FString> ResponseDatas;
+
+	/** Internal container for cached event triggers */
+	TMap<FGuid, FEvent*> RequestReadyEvents;
 };
 
 #endif // WITH_CIVET

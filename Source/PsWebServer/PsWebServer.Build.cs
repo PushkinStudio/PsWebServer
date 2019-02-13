@@ -72,5 +72,8 @@ public class PsWebServer : ModuleRules
         {
             PublicDefinitions.Add("WITH_CIVET=0");
         }
+
+        // Enable exceptions to allow error handling
+        bEnableExceptions = true;
     }
 }

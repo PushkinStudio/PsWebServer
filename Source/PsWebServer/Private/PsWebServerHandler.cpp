@@ -17,33 +17,33 @@ WebServerHandler::WebServerHandler()
 
 bool WebServerHandler::handlePost(CivetServer* server, struct mg_connection* conn)
 {
-	// Create async event waiter
+	// Create async event waiter and generate unique for request processor
 	FEvent* RequestReadyEvent = FGenericPlatformProcess::GetSynchEventFromPool();
-
-	// Generate unique for request processor
 	const FGuid RequestUniqueId = FGuid::NewGuid();
 	{
 		FScopeLock Lock(&CriticalSection);
 		ResponseDatas.Add(RequestUniqueId);
+		RequestReadyEvents.Emplace(RequestUniqueId, RequestReadyEvent);
 	}
 
 	// Prepare vars for lambda
 	TWeakObjectPtr<UPsWebServerHandler> RequestHandler = OwnerHandler;
 	FString PostData = CivetServer::getPostData(conn).c_str();
 
-	AsyncTask(ENamedThreads::GameThread, [RequestHandler, RequestUniqueId, PostData = std::move(PostData), RequestReadyEvent]() {
+	AsyncTask(ENamedThreads::GameThread, [RequestHandler, RequestUniqueId, PostData = std::move(PostData)]() {
 		if (RequestHandler.IsValid())
 		{
 			RequestHandler.Get()->ProcessRequest(RequestUniqueId, PostData);
 		}
-
-		// @TODO Test long event processing here (more than RequestTimeout)
-		RequestReadyEvent->Trigger();
 	});
 
 	// Wait for event or timeout
 	int32 WaitTime = RequestTimeout;
 	bool EventTriggered = RequestReadyEvent->Wait(WaitTime > 0 ? WaitTime : 2000);
+	{
+		FScopeLock Lock(&CriticalSection);
+		RequestReadyEvents.Remove(RequestUniqueId);
+	}
 	FGenericPlatformProcess::ReturnSynchEventToPool(RequestReadyEvent);
 
 	// Fetch response data
@@ -79,6 +79,14 @@ bool WebServerHandler::handleGet(CivetServer* server, struct mg_connection* conn
 	return false;
 }
 
+void WebServerHandler::ProcessRequest(const FGuid& RequestUniqueId, const FString& RequestData)
+{
+	FScopeLock Lock(&CriticalSection);
+
+	FEvent* SynchEvent = RequestReadyEvents.FindChecked(RequestUniqueId);
+	SynchEvent->Trigger();
+}
+
 bool WebServerHandler::SetResponseData(const FGuid& RequestUniqueId, const FString& ResponseData)
 {
 	FScopeLock Lock(&CriticalSection);
@@ -111,7 +119,9 @@ void UPsWebServerHandler::BeginDestroy()
 
 void UPsWebServerHandler::ProcessRequest_Implementation(const FGuid& RequestUniqueId, const FString& RequestData)
 {
-	UE_LOG(LogPwsAll, Warning, TEXT("%s: Override me"), *PS_FUNC_LINE);
+#if WITH_CIVET
+	Handler.ProcessRequest(RequestUniqueId, RequestData);
+#endif
 }
 
 bool UPsWebServerHandler::SetResponseData_Implementation(const FGuid& RequestUniqueId, const FString& ResponseData)
