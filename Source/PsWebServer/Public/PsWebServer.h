@@ -34,6 +34,9 @@ public:
 		return FModuleManager::Get().IsModuleLoaded("PsWebServer");
 	}
 
+	/** Getter for internal settings object to support runtime configuration changes */
+	UPsWebServerSettings* GetSettings() const;
+
 private:
 	/** Holds the kit settings */
 	UPsWebServerSettings* WebServerSettings;

@@ -2,6 +2,7 @@
 
 #include "PsWebServerHandler.h"
 
+#include "PsWebServer.h"
 #include "PsWebServerDefines.h"
 #include "PsWebServerSettings.h"
 #include "PsWebServerWrapper.h"
@@ -53,17 +54,20 @@ bool WebServerHandler::handlePost(CivetServer* server, struct mg_connection* con
 		OutputDataBody = std::string(TCHAR_TO_UTF8(*ResponseDatas.FindAndRemoveChecked(RequestUniqueId)));
 	}
 
+	const UPsWebServerSettings* ServerSettings = FPsWebServerModule::Get().GetSettings();
+
 	// @TODO Should be more elegant and externally controlled
 	FString ReplyCode = TEXT("200 OK");
 	FString ContentType = TEXT("application/json");
+	FString ConnectionHandle = ServerSettings->bEnableKeepAlive ? TEXT("keep-alive") : TEXT("close");
 
 	FString ResponseHeader = FString::Printf(TEXT("HTTP/1.1 %s\r\n"
 												  "Server: Pushkin Web Server\r\n"
 												  "Content-Type: %s\r\n"
 												  "Content-Length: %d\r\n"
-												  "Connection: keep-alive\r\n"
+												  "Connection: %s\r\n"
 												  "\r\n"),
-		*ReplyCode, *ContentType, (int32)OutputDataBody.size());
+		*ReplyCode, *ContentType, (int32)OutputDataBody.size(), *ConnectionHandle);
 
 	std::string OutputDataHeader = std::string(TCHAR_TO_UTF8(*ResponseHeader));
 
@@ -164,8 +168,7 @@ bool UPsWebServerHandler::BindHandler(UPsWebServerWrapper* ServerWrapper, const 
 	Wrapper = ServerWrapper;
 
 	// Cache request timeout from config
-	const UPsWebServerSettings* ServerSettings = GetDefault<UPsWebServerSettings>();
-	check(ServerSettings);
+	const UPsWebServerSettings* ServerSettings = FPsWebServerModule::Get().GetSettings();
 	Handler.RequestTimeout = ServerSettings->RequestTimeout;
 
 	// Bind handler to civet server internal instance

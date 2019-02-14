@@ -43,6 +43,12 @@ void FPsWebServerModule::ShutdownModule()
 	}
 }
 
+UPsWebServerSettings* FPsWebServerModule::GetSettings() const
+{
+	check(WebServerSettings);
+	return WebServerSettings;
+}
+
 #undef LOCTEXT_NAMESPACE
 
 IMPLEMENT_MODULE(FPsWebServerModule, PsWebServer)

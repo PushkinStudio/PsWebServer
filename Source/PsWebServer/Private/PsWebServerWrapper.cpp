@@ -2,6 +2,7 @@
 
 #include "PsWebServerWrapper.h"
 
+#include "PsWebServer.h"
 #include "PsWebServerDefines.h"
 #include "PsWebServerHandler.h"
 #include "PsWebServerSettings.h"
@@ -58,8 +59,7 @@ void UPsWebServerWrapper::StartExampleServer()
 void UPsWebServerWrapper::StartServer()
 {
 #if WITH_CIVET
-	const UPsWebServerSettings* ServerSettings = GetDefault<UPsWebServerSettings>();
-	check(ServerSettings);
+	const UPsWebServerSettings* ServerSettings = FPsWebServerModule::Get().GetSettings();
 
 	FString ServerURL = ServerSettings->ServerAddress;
 	if (ServerSettings->ServerPort != 0)
@@ -70,6 +70,8 @@ void UPsWebServerWrapper::StartServer()
 	std::vector<std::string> cpp_options;
 	cpp_options.push_back("listening_ports");
 	cpp_options.push_back(TCHAR_TO_ANSI(*ServerURL));
+	cpp_options.push_back("num_threads");
+	cpp_options.push_back(TCHAR_TO_ANSI(*FString::FromInt(ServerSettings->NumTreads)));
 
 	if (ServerSettings->bEnableKeepAlive)
 	{
