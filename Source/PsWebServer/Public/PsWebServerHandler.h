@@ -3,7 +3,7 @@
 #pragma once
 
 #if WITH_CIVET
-#include "civetweb/include/CivetServer.h"
+#include "CivetServer.h"
 #endif
 
 #include "CoreMinimal.h"

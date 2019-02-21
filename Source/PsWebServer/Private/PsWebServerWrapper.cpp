@@ -8,7 +8,7 @@
 #include "PsWebServerSettings.h"
 
 #if WITH_CIVET
-#include "civetweb/include/CivetServer.h"
+#include "CivetServer.h"
 
 // CivetWeb Example
 class ExampleHandler : public CivetHandler

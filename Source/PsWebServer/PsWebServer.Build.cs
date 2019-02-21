@@ -9,30 +9,6 @@ public class PsWebServer : ModuleRules
     {
         PCHUsage = ModuleRules.PCHUsageMode.UseExplicitOrSharedPCHs;
 
-        PrivateIncludePaths.AddRange(
-            new string[] {
-                "PsWebServer/Private",
-                "PsWebServer/Private/civetweb",
-                "PsWebServer/Private/civetweb/include",
-            }
-        );
-
-        PublicIncludePaths.AddRange(
-            new string[] {
-                Path.Combine(ModuleDirectory, "Private"),
-                Path.Combine(ModuleDirectory, "Private/civetweb"),
-                Path.Combine(ModuleDirectory, "Private/civetweb/include"),
-            }
-            );
-
-
-        PrivateIncludePaths.AddRange(
-            new string[] {
-				// ... add other private include paths required here ...
-			}
-            );
-
-
         PublicDependencyModuleNames.AddRange(
             new string[]
             {
@@ -53,20 +29,65 @@ public class PsWebServer : ModuleRules
 			}
             );
 
-
-        DynamicallyLoadedModuleNames.AddRange(
-            new string[]
-            {
-				// ... add any modules that your module loads dynamically here ...
-			}
-            );
-
-        if ((Target.Platform == UnrealTargetPlatform.Win64) ||
-            (Target.Platform == UnrealTargetPlatform.Win32) ||
-            (Target.Platform == UnrealTargetPlatform.Mac) ||
-            (Target.Platform == UnrealTargetPlatform.Linux))
+        if (Target.Platform == UnrealTargetPlatform.Win64)
         {
             PublicDefinitions.Add("WITH_CIVET=1");
+
+            PrivateIncludePaths.AddRange(
+                new string[] {
+                    "PsWebServer/Private",
+                    "PsWebServer/Private/Win64",
+                    "PsWebServer/Private/Win64/include",
+                    }
+            );
+
+            PublicIncludePaths.AddRange(
+                new string[] {
+                    Path.Combine(ModuleDirectory, "Private"),
+                    Path.Combine(ModuleDirectory, "Private/Win64"),
+                    Path.Combine(ModuleDirectory, "Private/Win64/include"),
+                }
+            );
+        }
+        else if (Target.Platform == UnrealTargetPlatform.Mac)
+        {
+            PublicDefinitions.Add("WITH_CIVET=1");
+
+            PrivateIncludePaths.AddRange(
+                new string[] {
+                    "PsWebServer/Private",
+                    "PsWebServer/Private/Mac",
+                    "PsWebServer/Private/Mac/include",
+                    }
+            );
+
+            PublicIncludePaths.AddRange(
+                new string[] {
+                    Path.Combine(ModuleDirectory, "Private"),
+                    Path.Combine(ModuleDirectory, "Private/Mac"),
+                    Path.Combine(ModuleDirectory, "Private/Mac/include"),
+                }
+            );
+        }
+        else if (Target.Platform == UnrealTargetPlatform.Linux)
+        {
+            PublicDefinitions.Add("WITH_CIVET=1");
+
+            PrivateIncludePaths.AddRange(
+                new string[] {
+                    "PsWebServer/Private",
+                    "PsWebServer/Private/Linux",
+                    "PsWebServer/Private/Linux/include",
+                    }
+            );
+
+            PublicIncludePaths.AddRange(
+                new string[] {
+                    Path.Combine(ModuleDirectory, "Private"),
+                    Path.Combine(ModuleDirectory, "Private/Linux"),
+                    Path.Combine(ModuleDirectory, "Private/Linux/include"),
+                }
+            );
         }
         else
         {

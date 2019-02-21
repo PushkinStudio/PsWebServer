@@ -7,11 +7,6 @@
 // clang-format off
 
 // .c file is specific so we can't include PsWebServerDefines.h here
-#ifndef WITH_CIVET
-#define WITH_CIVET 0
-#endif
-
-#if WITH_CIVET
 
 #ifndef _CIVETWEB_SERVER_H_
 #define _CIVETWEB_SERVER_H_
@@ -656,5 +651,3 @@ class CIVETWEB_CXX_API CivetServer
 
 #endif /*  __cplusplus */
 #endif /* _CIVETWEB_SERVER_H_ */
-
-#endif // WITH_CIVET

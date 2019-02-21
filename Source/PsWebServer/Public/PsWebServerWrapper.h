@@ -7,7 +7,7 @@
 #include "PsWebServerWrapper.generated.h"
 
 #if WITH_CIVET
-#include "civetweb/include/CivetServer.h"
+#include "CivetServer.h"
 #endif
 
 class UPsWebServerHandler;
