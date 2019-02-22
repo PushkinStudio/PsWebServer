@@ -32,6 +32,7 @@ public class PsWebServer : ModuleRules
         if (Target.Platform == UnrealTargetPlatform.Win64)
         {
             PublicDefinitions.Add("WITH_CIVET=1");
+            bEnableExceptions = true;
 
             PrivateIncludePaths.AddRange(
                 new string[] {
@@ -52,6 +53,7 @@ public class PsWebServer : ModuleRules
         else if (Target.Platform == UnrealTargetPlatform.Mac)
         {
             PublicDefinitions.Add("WITH_CIVET=1");
+            bEnableExceptions = true;
 
             PrivateIncludePaths.AddRange(
                 new string[] {
@@ -72,6 +74,7 @@ public class PsWebServer : ModuleRules
         else if (Target.Platform == UnrealTargetPlatform.Linux)
         {
             PublicDefinitions.Add("WITH_CIVET=1");
+            bEnableExceptions = true;
 
             PrivateIncludePaths.AddRange(
                 new string[] {
@@ -93,8 +96,5 @@ public class PsWebServer : ModuleRules
         {
             PublicDefinitions.Add("WITH_CIVET=0");
         }
-
-        // Enable exceptions to allow error handling
-        bEnableExceptions = true;
     }
 }
