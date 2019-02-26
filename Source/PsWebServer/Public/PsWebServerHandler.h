@@ -29,6 +29,8 @@ public:
 	void ProcessRequest(const FGuid& RequestUniqueId, const FString& RequestData);
 	bool SetResponseData(const FGuid& RequestUniqueId, const FString& ResponseData);
 
+	void SetHeader(const FString& HeaderName, const FString& HeaderValue);
+
 public:
 	/** Timeout in msec for the entire http request to complete (see UPsWebServerSettings::RequestTimeout)*/
 	TAtomic<int32> RequestTimeout;
@@ -45,6 +47,15 @@ private:
 
 	/** Internal container for cached event triggers */
 	TMap<FGuid, FEvent*> RequestReadyEvents;
+
+	/** Request headers that will be added to the response */
+	TMap<FString, FString> ResponseHeaders;
+
+	/** Request headers cached as a string */
+	FString CachedResponseHeaders;
+
+private:
+	FString PrintHeadersToString(const TMap<FString, FString>& Headers);
 };
 
 #endif // WITH_CIVET
@@ -67,6 +78,10 @@ public:
 	UFUNCTION(BlueprintNativeEvent, Category = "PsWebServer|Handler")
 	bool SetResponseData(const FGuid& RequestUniqueId, const FString& ResponseData);
 
+	/** Sets optional header info (should be global for handler) */
+	UFUNCTION(BlueprintCallable, Category = "PsWebServer|Handler")
+	void SetHeader(const FString& HeaderName, const FString& HeaderValue);
+
 	/** Get HandlerURI value */
 	UFUNCTION(BlueprintCallable, Category = "PsWebServer")
 	FString GetURI() const;
@@ -80,6 +95,9 @@ private:
 
 	/** Weak pointer to server used for handler binding */
 	TWeakObjectPtr<UPsWebServerWrapper> Wrapper;
+
+	/** Internal binned status */
+	bool bHandlerBinned;
 
 #if WITH_CIVET
 private:

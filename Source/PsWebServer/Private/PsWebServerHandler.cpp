@@ -14,6 +14,12 @@
 WebServerHandler::WebServerHandler()
 {
 	RequestTimeout = 0;
+
+	const UPsWebServerSettings* ServerSettings = FPsWebServerModule::Get().GetSettings();
+	ResponseHeaders.Emplace(TEXT("Server"), TEXT("Pushkin Web Server"));
+	ResponseHeaders.Emplace(TEXT("Content-Type"), TEXT("application/json"));
+	ResponseHeaders.Emplace(TEXT("Connection"), ServerSettings->bEnableKeepAlive ? TEXT("keep-alive") : TEXT("close"));
+	CachedResponseHeaders = PrintHeadersToString(ResponseHeaders);
 }
 
 bool WebServerHandler::handlePost(CivetServer* server, struct mg_connection* conn)
@@ -54,20 +60,21 @@ bool WebServerHandler::handlePost(CivetServer* server, struct mg_connection* con
 		OutputDataBody = std::string(TCHAR_TO_UTF8(*ResponseDatas.FindAndRemoveChecked(RequestUniqueId)));
 	}
 
-	const UPsWebServerSettings* ServerSettings = FPsWebServerModule::Get().GetSettings();
+	// Update unique per-request params
+	TMap<FString, FString> AdditionalHeaders;
+	AdditionalHeaders.Emplace(TEXT("X-Request-ID"), RequestUniqueId.ToString());
+	AdditionalHeaders.Emplace(TEXT("Content-Length"), FString::FromInt((int32)OutputDataBody.size()));
 
-	// @TODO Should be more elegant and externally controlled
+	// @TODO Reply code should be more elegant and externally controlled
 	FString ReplyCode = TEXT("200 OK");
-	FString ContentType = TEXT("application/json");
-	FString ConnectionHandle = ServerSettings->bEnableKeepAlive ? TEXT("keep-alive") : TEXT("close");
-
-	FString ResponseHeader = FString::Printf(TEXT("HTTP/1.1 %s\r\n"
-												  "Server: Pushkin Web Server\r\n"
-												  "Content-Type: %s\r\n"
-												  "Content-Length: %d\r\n"
-												  "Connection: %s\r\n"
-												  "\r\n"),
-		*ReplyCode, *ContentType, (int32)OutputDataBody.size(), *ConnectionHandle);
+	FString ResponseHeader = FString::Printf(TEXT("HTTP/1.1 %s\r\n"), *ReplyCode);
+	{
+		// Lock is not used because header set is allowed only before handler bind
+		// FScopeLock Lock(&CriticalSection);
+		ResponseHeader.Append(CachedResponseHeaders);
+	}
+	ResponseHeader.Append(PrintHeadersToString(AdditionalHeaders));
+	ResponseHeader.Append("\r\n");
 
 	std::string OutputDataHeader = std::string(TCHAR_TO_UTF8(*ResponseHeader));
 
@@ -107,6 +114,24 @@ bool WebServerHandler::SetResponseData(const FGuid& RequestUniqueId, const FStri
 
 	return false;
 }
+void WebServerHandler::SetHeader(const FString& HeaderName, const FString& HeaderValue)
+{
+	FScopeLock Lock(&CriticalSection);
+
+	ResponseHeaders.Emplace(HeaderName, HeaderValue);
+	CachedResponseHeaders = PrintHeadersToString(ResponseHeaders);
+}
+
+FString WebServerHandler::PrintHeadersToString(const TMap<FString, FString>& Headers)
+{
+	FString OutputStr;
+	for (auto& Header : Headers)
+	{
+		OutputStr.Append(Header.Key + ": " + Header.Value + "\r\n");
+	}
+
+	return OutputStr;
+}
 #endif // WITH_CIVET
 
 void UPsWebServerHandler::BeginDestroy()
@@ -134,6 +159,19 @@ bool UPsWebServerHandler::SetResponseData_Implementation(const FGuid& RequestUni
 	return Handler.SetResponseData(RequestUniqueId, ResponseData);
 #else
 	return false;
+#endif
+}
+
+void UPsWebServerHandler::SetHeader(const FString& HeaderName, const FString& HeaderValue)
+{
+#if WITH_CIVET
+	if (bHandlerBinned)
+	{
+		UE_LOG(LogPwsAll, Error, TEXT("%s: Can't set handler header: it's already binned"), *PS_FUNC_LINE);
+		return;
+	}
+
+	Handler.SetHeader(HeaderName, HeaderValue);
 #endif
 }
 
@@ -174,6 +212,9 @@ bool UPsWebServerHandler::BindHandler(UPsWebServerWrapper* ServerWrapper, const 
 	// Bind handler to civet server internal instance
 	Handler.OwnerHandler = (const_cast<UPsWebServerHandler*>(this));
 	ServerWrapper->Server->addHandler(TCHAR_TO_ANSI(*HandlerURI), Handler);
+
+	// Set as binned
+	bHandlerBinned = true;
 
 	return true;
 #else
