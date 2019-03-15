@@ -46,7 +46,7 @@ bool WebServerHandler::handlePost(CivetServer* server, struct mg_connection* con
 
 	// Wait for event or timeout
 	int32 WaitTime = RequestTimeout;
-	bool EventTriggered = RequestReadyEvent->Wait(WaitTime > 0 ? WaitTime : 2000);
+	bool bEventTriggered = RequestReadyEvent->Wait(WaitTime > 0 ? WaitTime : 2000);
 	{
 		FScopeLock Lock(&CriticalSection);
 		RequestReadyEvents.Remove(RequestUniqueId);
@@ -55,6 +55,7 @@ bool WebServerHandler::handlePost(CivetServer* server, struct mg_connection* con
 
 	// Fetch response data
 	std::string OutputDataBody("{}");
+	if (bEventTriggered)
 	{
 		FScopeLock Lock(&CriticalSection);
 		OutputDataBody = std::string(TCHAR_TO_UTF8(*ResponseDatas.FindAndRemoveChecked(RequestUniqueId)));
@@ -66,7 +67,7 @@ bool WebServerHandler::handlePost(CivetServer* server, struct mg_connection* con
 	AdditionalHeaders.Emplace(TEXT("Content-Length"), FString::FromInt((int32)OutputDataBody.size()));
 
 	// @TODO Reply code should be more elegant and externally controlled
-	FString ReplyCode = TEXT("200 OK");
+	FString ReplyCode = bEventTriggered ? TEXT("200 OK") : TEXT("503 Service Unavailable");
 	FString ResponseHeader = FString::Printf(TEXT("HTTP/1.1 %s\r\n"), *ReplyCode);
 	{
 		// Lock is not used because header set is allowed only before handler bind
@@ -94,8 +95,14 @@ void WebServerHandler::ProcessRequest(const FGuid& RequestUniqueId, const FStrin
 {
 	FScopeLock Lock(&CriticalSection);
 
-	FEvent* SynchEvent = RequestReadyEvents.FindChecked(RequestUniqueId);
-	SynchEvent->Trigger();
+	if (auto SynchEvent = RequestReadyEvents.Find(RequestUniqueId))
+	{
+		(*SynchEvent)->Trigger();
+	}
+	else
+	{
+		UE_LOG(LogPwsAll, Error, TEXT("%s: No GUID %s is found for processing request (maybe RequestTimeout): %s"), *PS_FUNC_LINE, *RequestUniqueId.ToString(), *RequestData);
+	}
 }
 
 bool WebServerHandler::SetResponseData(const FGuid& RequestUniqueId, const FString& ResponseData)
