@@ -108,15 +108,23 @@ void UPsWebServerWrapper::StartServer()
 	}
 
 	UE_LOG(LogPwsAll, Log, TEXT("%s: CivetWeb server instance started on: %s"), *PS_FUNC_LINE, *ServerURL);
-#else
-	UE_LOG(LogPwsAll, Error, TEXT("%s: Civet is not supported"), *PS_FUNC_LINE);
-#endif // WITH_CIVET
 
 	// Setup ForceGC timer
 	if (ServerSettings->ForceGCTime > 0)
 	{
-		GetOuter()->GetWorld()->GetTimerManager().SetTimer(TimerHandle_ForceGCTimer, this, &UPsWebServerWrapper::ForceGCTimer, (float)ServerSettings->ForceGCTime / 1000, true);
+		if (GetOuter() && GetOuter()->GetWorld())
+		{
+			GetOuter()->GetWorld()->GetTimerManager().SetTimer(TimerHandle_ForceGCTimer, this, &UPsWebServerWrapper::ForceGCTimer, (float)ServerSettings->ForceGCTime / 1000, true);
+			UE_LOG(LogPwsAll, Log, TEXT("%s: ForceGC timer started with period: %d (msec)"), *PS_FUNC_LINE, ServerSettings->ForceGCTime);
+		}
+		else
+		{
+			UE_LOG(LogPwsAll, Error, TEXT("%s: No valid world found to start ForceGC timer"), *PS_FUNC_LINE);
+		}
 	}
+#else
+	UE_LOG(LogPwsAll, Error, TEXT("%s: Civet is not supported"), *PS_FUNC_LINE);
+#endif // WITH_CIVET
 }
 
 void UPsWebServerWrapper::StopServer()
@@ -131,7 +139,14 @@ void UPsWebServerWrapper::StopServer()
 	}
 #endif // WITH_CIVET
 
-	GetOuter()->GetWorld()->GetTimerManager().ClearTimer(TimerHandle_ForceGCTimer);
+	if (GetOuter() && GetOuter()->GetWorld())
+	{
+		GetOuter()->GetWorld()->GetTimerManager().ClearTimer(TimerHandle_ForceGCTimer);
+	}
+	else
+	{
+		UE_LOG(LogPwsAll, Log, TEXT("%s: No valid world found to stop ForceGC timer. It's okay on app shutdown."), *PS_FUNC_LINE);
+	}
 }
 
 bool UPsWebServerWrapper::AddHandler(UPsWebServerHandler* Handler, const FString& URI)
