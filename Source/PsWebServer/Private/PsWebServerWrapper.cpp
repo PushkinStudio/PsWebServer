@@ -7,6 +7,9 @@
 #include "PsWebServerHandler.h"
 #include "PsWebServerSettings.h"
 
+#include "Engine/Engine.h"
+#include "Engine/World.h"
+
 #if WITH_CIVET
 #include "CivetServer.h"
 
@@ -108,6 +111,12 @@ void UPsWebServerWrapper::StartServer()
 #else
 	UE_LOG(LogPwsAll, Error, TEXT("%s: Civet is not supported"), *PS_FUNC_LINE);
 #endif // WITH_CIVET
+
+	// Setup ForceGC timer
+	if (ServerSettings->ForceGCTime > 0)
+	{
+		GetOuter()->GetWorld()->GetTimerManager().SetTimer(TimerHandle_ForceGCTimer, this, &UPsWebServerWrapper::ForceGCTimer, (float)ServerSettings->ForceGCTime / 1000, true);
+	}
 }
 
 void UPsWebServerWrapper::StopServer()
@@ -121,6 +130,8 @@ void UPsWebServerWrapper::StopServer()
 		UE_LOG(LogPwsAll, Log, TEXT("%s: CivetWeb server instance stopped"), *PS_FUNC_LINE);
 	}
 #endif // WITH_CIVET
+
+	GetOuter()->GetWorld()->GetTimerManager().ClearTimer(TimerHandle_ForceGCTimer);
 }
 
 bool UPsWebServerWrapper::AddHandler(UPsWebServerHandler* Handler, const FString& URI)
@@ -159,4 +170,10 @@ bool UPsWebServerWrapper::RemoveHandler(const FString& URI)
 #endif // WITH_CIVET
 
 	return false;
+}
+
+void UPsWebServerWrapper::ForceGCTimer()
+{
+	UE_LOG(LogPwsAll, Log, TEXT("%s: Force garbage collection"), *PS_FUNC_LINE);
+	GEngine->ForceGarbageCollection();
 }

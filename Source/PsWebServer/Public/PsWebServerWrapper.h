@@ -3,6 +3,7 @@
 #pragma once
 
 #include "CoreUObject.h"
+#include "TimerManager.h"
 
 #include "PsWebServerWrapper.generated.h"
 
@@ -46,6 +47,12 @@ public:
 	/** Remove handler from URI */
 	UFUNCTION(BlueprintCallable, Category = "PsWebServer")
 	bool RemoveHandler(const FString& URI);
+
+protected:
+	virtual void ForceGCTimer();
+
+protected:
+	FTimerHandle TimerHandle_ForceGCTimer;
 
 private:
 	/** All added handlers <URI, Handler> */

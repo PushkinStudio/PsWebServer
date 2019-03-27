@@ -29,11 +29,15 @@ class UPsWebServerSettings : public UObject
 	int32 KeepAliveTimeout;
 
 	/** Timeout in msec for the entire http request to complete. */
-	UPROPERTY(Config, EditAnywhere, Category = "Server Settings", meta = (ClampMin = 0, ClampMax = 5000))
+	UPROPERTY(Config, EditAnywhere, Category = "Server Settings", meta = (ClampMin = 0, ClampMax = 60000))
 	int32 RequestTimeout;
 
 	/** Number of worker threads. CivetWeb handles each incoming connection in a separate thread. Therefore, 
 	 * the value of this option is effectively the number of concurrent HTTP connections CivetWeb can handle. */
 	UPROPERTY(Config, EditAnywhere, Category = "Server Settings", meta = (ClampMin = 1, ClampMax = 250))
 	int32 NumTreads;
+
+	/** Force garbage collection time (msec). If == 0 gc won't be triggered manually. */
+	UPROPERTY(Config, EditAnywhere, Category = "Server Settings", meta = (ClampMin = 0, ClampMax = 60000))
+	int32 ForceGCTime;
 };

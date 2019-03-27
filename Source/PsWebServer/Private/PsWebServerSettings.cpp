@@ -18,6 +18,8 @@ UPsWebServerSettings::UPsWebServerSettings(const FObjectInitializer& ObjectIniti
 	RequestTimeout = 1000;
 
 	NumTreads = 50;
+
+	ForceGCTime = 5000;
 }
 
 void UPsWebServerSettings::Load()
@@ -52,5 +54,10 @@ void UPsWebServerSettings::Load()
 	if (!FParse::Value(FCommandLine::Get(), TEXT("NumTreads="), NumTreads))
 	{
 		GConfig->GetInt(*ConfigSection, TEXT("NumTreads"), NumTreads, GEngineIni);
+	}
+
+	if (!FParse::Value(FCommandLine::Get(), TEXT("ForceGCTime="), ForceGCTime))
+	{
+		GConfig->GetInt(*ConfigSection, TEXT("ForceGCTime"), ForceGCTime, GEngineIni);
 	}
 }
