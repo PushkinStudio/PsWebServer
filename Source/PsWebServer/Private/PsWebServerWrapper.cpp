@@ -190,5 +190,5 @@ bool UPsWebServerWrapper::RemoveHandler(const FString& URI)
 void UPsWebServerWrapper::ForceGCTimer()
 {
 	UE_LOG(LogPwsAll, Log, TEXT("%s: Force garbage collection"), *PS_FUNC_LINE);
-	GEngine->ForceGarbageCollection();
+	GEngine->ForceGarbageCollection(true);
 }
