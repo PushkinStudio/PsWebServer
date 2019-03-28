@@ -42,10 +42,9 @@ bool WebServerHandler::handlePost(CivetServer* server, struct mg_connection* con
 	AsyncTask(ENamedThreads::GameThread, [RequestHandler, RequestUniqueId, PostData = std::move(PostData)]() {
 		if (RequestHandler.IsValid())
 		{
-			check(RequestHandler.Get()->GetOuter());
-			check(RequestHandler.Get()->GetOuter()->GetWorld());
+			check(RequestHandler.Get()->GetWorld());
 
-			RequestHandler.Get()->GetOuter()->GetWorld()->GetTimerManager().SetTimerForNextTick(FTimerDelegate::CreateLambda([RequestHandler, RequestUniqueId, PostData = std::move(PostData)]() {
+			RequestHandler.Get()->GetWorld()->GetTimerManager().SetTimerForNextTick(FTimerDelegate::CreateLambda([RequestHandler, RequestUniqueId, PostData = std::move(PostData)]() {
 				if (RequestHandler.IsValid())
 				{
 					RequestHandler.Get()->ProcessRequest(RequestUniqueId, PostData);
