@@ -7,6 +7,8 @@
 #include "PsWebServerSettings.h"
 #include "PsWebServerWrapper.h"
 
+#include "Engine/Engine.h"
+#include "Engine/World.h"
 #include "HAL/CriticalSection.h"
 #include "Misc/ScopeLock.h"
 
@@ -40,7 +42,15 @@ bool WebServerHandler::handlePost(CivetServer* server, struct mg_connection* con
 	AsyncTask(ENamedThreads::GameThread, [RequestHandler, RequestUniqueId, PostData = std::move(PostData)]() {
 		if (RequestHandler.IsValid())
 		{
-			RequestHandler.Get()->ProcessRequest(RequestUniqueId, PostData);
+			check(RequestHandler.Get()->GetOuter());
+			check(RequestHandler.Get()->GetOuter()->GetWorld());
+
+			RequestHandler.Get()->GetOuter()->GetWorld()->GetTimerManager().SetTimerForNextTick(FTimerDelegate::CreateLambda([RequestHandler, RequestUniqueId, PostData = std::move(PostData)]() {
+				if (RequestHandler.IsValid())
+				{
+					RequestHandler.Get()->ProcessRequest(RequestUniqueId, PostData);
+				}
+			}));
 		}
 	});
 
