@@ -1,5 +1,7 @@
 # PsWebServer
 
+[![statusIcon](https://teamcity.ufna.dev/app/rest/builds/buildType:(id:Pushkin_PsWebServer_ClangFormatCheck)/statusIcon.svg)](https://teamcity.ufna.dev/viewType.html?buildTypeId=Pushkin_PsWebServer_ClangFormatCheck&guest=1)
+
 Civet web server integration plugin for Unreal Engine 4
 
 # HowTo
