@@ -4,178 +4,89 @@
 
 #include "PsWebServer.h"
 #include "PsWebServerDefines.h"
+#include "PsWebServerPlugin.h"
 #include "PsWebServerSettings.h"
-#include "PsWebServerWrapper.h"
 
-#include "Engine/Engine.h"
 #include "Engine/World.h"
-#include "HAL/CriticalSection.h"
-#include "Misc/ScopeLock.h"
+#include "TimerManager.h"
 
 #if WITH_CIVET
-WebServerHandler::WebServerHandler()
-{
-	RequestTimeout = 0;
-
-	const UPsWebServerSettings* ServerSettings = FPsWebServerModule::Get().GetSettings();
-	ResponseHeaders.Emplace(TEXT("Server"), TEXT("Pushkin Web Server"));
-	ResponseHeaders.Emplace(TEXT("Content-Type"), TEXT("application/json"));
-	ResponseHeaders.Emplace(TEXT("Connection"), ServerSettings->bEnableKeepAlive ? TEXT("keep-alive") : TEXT("close"));
-	CachedResponseHeaders = PrintHeadersToString(ResponseHeaders);
-}
-
-bool WebServerHandler::handlePost(CivetServer* server, struct mg_connection* conn)
-{
-	// Create async event waiter and generate unique for request processor
-	FEvent* RequestReadyEvent = FGenericPlatformProcess::GetSynchEventFromPool();
-	const FGuid RequestUniqueId = FGuid::NewGuid();
-	{
-		FScopeLock Lock(&CriticalSection);
-		ResponseDatas.Add(RequestUniqueId);
-		RequestReadyEvents.Emplace(RequestUniqueId, RequestReadyEvent);
-	}
-
-	// Prepare vars for lambda
-	TWeakObjectPtr<UPsWebServerHandler> RequestHandler = OwnerHandler;
-	FString PostData = CivetServer::getPostData(conn).c_str();
-
-	AsyncTask(ENamedThreads::GameThread, [RequestHandler, RequestUniqueId, PostData = std::move(PostData)]() {
-		if (RequestHandler.IsValid())
-		{
-			check(RequestHandler.Get()->GetWorld());
-
-			RequestHandler.Get()->GetWorld()->GetTimerManager().SetTimerForNextTick(FTimerDelegate::CreateLambda([RequestHandler, RequestUniqueId, PostData = std::move(PostData)]() {
-				if (RequestHandler.IsValid())
-				{
-					RequestHandler.Get()->ProcessRequest(RequestUniqueId, PostData);
-				}
-			}));
-		}
-	});
-
-	// Wait for event or timeout
-	int32 WaitTime = RequestTimeout;
-	bool bEventTriggered = RequestReadyEvent->Wait(WaitTime > 0 ? WaitTime : 2000);
-	{
-		FScopeLock Lock(&CriticalSection);
-		RequestReadyEvents.Remove(RequestUniqueId);
-	}
-	FGenericPlatformProcess::ReturnSynchEventToPool(RequestReadyEvent);
-
-	// Fetch response data
-	std::string OutputDataBody("{}");
-	if (bEventTriggered)
-	{
-		FScopeLock Lock(&CriticalSection);
-		OutputDataBody = std::string(TCHAR_TO_UTF8(*ResponseDatas.FindAndRemoveChecked(RequestUniqueId)));
-	}
-
-	// Update unique per-request params
-	TMap<FString, FString> AdditionalHeaders;
-	AdditionalHeaders.Emplace(TEXT("X-Request-ID"), RequestUniqueId.ToString());
-	AdditionalHeaders.Emplace(TEXT("Content-Length"), FString::FromInt((int32)OutputDataBody.size()));
-
-	// @TODO Reply code should be more elegant and externally controlled
-	FString ReplyCode = bEventTriggered ? TEXT("200 OK") : TEXT("503 Service Unavailable");
-	FString ResponseHeader = FString::Printf(TEXT("HTTP/1.1 %s\r\n"), *ReplyCode);
-	{
-		// Lock is not used because header set is allowed only before handler bind
-		// FScopeLock Lock(&CriticalSection);
-		ResponseHeader.Append(CachedResponseHeaders);
-	}
-	ResponseHeader.Append(PrintHeadersToString(AdditionalHeaders));
-	ResponseHeader.Append("\r\n");
-
-	std::string OutputDataHeader = std::string(TCHAR_TO_UTF8(*ResponseHeader));
-
-	mg_printf(conn, "%s", OutputDataHeader.c_str());
-	int32 NumWritten = mg_write(conn, OutputDataBody.c_str(), OutputDataBody.size());
-
-	return true;
-}
-
-bool WebServerHandler::handleGet(CivetServer* server, struct mg_connection* conn)
-{
-	// We support only POST for now
-	return false;
-}
-
-void WebServerHandler::ProcessRequest(const FGuid& RequestUniqueId, const FString& RequestData)
-{
-	FScopeLock Lock(&CriticalSection);
-
-	if (auto SynchEvent = RequestReadyEvents.Find(RequestUniqueId))
-	{
-		(*SynchEvent)->Trigger();
-	}
-	else
-	{
-		UE_LOG(LogPwsAll, Error, TEXT("%s: No GUID %s is found for processing request (maybe RequestTimeout): %s"), *PS_FUNC_LINE, *RequestUniqueId.ToString(), *RequestData);
-	}
-}
-
-bool WebServerHandler::SetResponseData(const FGuid& RequestUniqueId, const FString& ResponseData)
-{
-	FScopeLock Lock(&CriticalSection);
-
-	if (ResponseDatas.Contains(RequestUniqueId))
-	{
-		ResponseDatas.Emplace(RequestUniqueId, ResponseData);
-		return true;
-	}
-	else
-	{
-		UE_LOG(LogPwsAll, Error, TEXT("%s: No GUID %s is found for data: %s"), *PS_FUNC_LINE, *RequestUniqueId.ToString(), *ResponseData);
-	}
-
-	return false;
-}
-void WebServerHandler::SetHeader(const FString& HeaderName, const FString& HeaderValue)
-{
-	FScopeLock Lock(&CriticalSection);
-
-	ResponseHeaders.Emplace(HeaderName, HeaderValue);
-	CachedResponseHeaders = PrintHeadersToString(ResponseHeaders);
-}
-
-FString WebServerHandler::PrintHeadersToString(const TMap<FString, FString>& Headers)
-{
-	FString OutputStr;
-	for (auto& Header : Headers)
-	{
-		OutputStr.Append(Header.Key + ": " + Header.Value + "\r\n");
-	}
-
-	return OutputStr;
-}
-#endif // WITH_CIVET
+#include "PsWebServerHandlerImpl.h"
+#endif
 
 void UPsWebServerHandler::BeginDestroy()
 {
-#if WITH_CIVET
-	if (Wrapper.IsValid())
+	if (Server.IsValid())
 	{
-		Wrapper.Get()->RemoveHandler(HandlerURI);
+		Server->RemoveHandler(HandlerURI);
 	}
+
+	// Processing for scheduled requests will never be started
+	for (const auto& RequestId : ScheduledRequests)
+	{
+		UE_LOG(LogPwsAll, Warning, TEXT("%s: request id '%s': reset with empty response"), *PS_FUNC_LINE, *RequestId.ToString());
+#if WITH_CIVET
+		Impl->ProcessRequestFinish(RequestId, FString{});
+#endif
+	}
+	ScheduledRequests.Empty();
+
+#if WITH_CIVET
+	Impl->OwnerHandler = nullptr;
+	Impl.Reset();
 #endif
 
 	Super::BeginDestroy();
 }
 
-void UPsWebServerHandler::ProcessRequest_Implementation(const FGuid& RequestUniqueId, const FString& RequestData)
-{
+UPsWebServerHandler::UPsWebServerHandler()
+	: bProcessing(false)
+	, bAborted(false)
 #if WITH_CIVET
-	Handler.ProcessRequest(RequestUniqueId, RequestData);
+	, Impl(FPimpl{new FPsWebServerHandlerImpl{}})
+#endif
+{
+}
+
+void UPsWebServerHandler::ProcessRequest_Implementation(const FGuid& RequestId, const FString& RequestData)
+{
+	ProcessRequestFinish(RequestId, FString{});
+}
+
+void UPsWebServerHandler::ProcessRequestFinish(const FGuid& RequestId, const FString& ResponseData)
+{
+	if (bAborted)
+	{
+		UE_LOG(LogPwsAll, Error, TEXT("%s: request was aborted"), *PS_FUNC_LINE);
+		return;
+	}
+
+	check(bProcessing);
+	bProcessing = false;
+
+	CancellationTokenPtr.Reset();
+
+	UE_LOG(LogPwsAll, Verbose, TEXT("%s: request id '%s'"), *PS_FUNC_LINE, *RequestId.ToString());
+
+#if WITH_CIVET
+	Impl->ProcessRequestFinish(RequestId, ResponseData);
 #endif
 }
 
-bool UPsWebServerHandler::SetResponseData_Implementation(const FGuid& RequestUniqueId, const FString& ResponseData)
+bool UPsWebServerHandler::IsCancelled() const
 {
-#if WITH_CIVET
-	return Handler.SetResponseData(RequestUniqueId, ResponseData);
-#else
-	return false;
-#endif
+	check(bProcessing);
+	return CancellationTokenPtr->IsCanceled();
+}
+
+bool UPsWebServerHandler::IsProcessing() const
+{
+	return bProcessing;
+}
+
+bool UPsWebServerHandler::IsAborted() const
+{
+	return bAborted;
 }
 
 void UPsWebServerHandler::SetHeader(const FString& HeaderName, const FString& HeaderValue)
@@ -187,7 +98,18 @@ void UPsWebServerHandler::SetHeader(const FString& HeaderName, const FString& He
 		return;
 	}
 
-	Handler.SetHeader(HeaderName, HeaderValue);
+	Impl->SetHeader(HeaderName, HeaderValue);
+#endif
+}
+
+FString UPsWebServerHandler::GetHeader(const FGuid& RequestId, const FString& HeaderName) const
+{
+	check(bProcessing);
+
+#if WITH_CIVET
+	return Impl->GetHeader(RequestId, HeaderName);
+#else
+	return FString{};
 #endif
 }
 
@@ -196,38 +118,40 @@ FString UPsWebServerHandler::GetURI() const
 	return HandlerURI;
 }
 
-bool UPsWebServerHandler::BindHandler(UPsWebServerWrapper* ServerWrapper, const FString& URI)
+FPsWebCancellationTokenRef UPsWebServerHandler::GetCancellationToken() const
+{
+	check(bProcessing);
+	return CancellationTokenPtr.ToSharedRef();
+}
+
+FString UPsWebServerHandler::GetAbortAsyncResponse() const
+{
+	return FString{};
+}
+
+FString UPsWebServerHandler::GetTimeoutResponse() const
+{
+	return FString{};
+}
+
+bool UPsWebServerHandler::BindHandler(UPsWebServer* InServer, const FString& URI, CivetServer* ServerImpl)
 {
 #if WITH_CIVET
-	if (ServerWrapper == nullptr)
-	{
-		UE_LOG(LogPwsAll, Error, TEXT("%s: Can't bind hadler: invalid ServerWrapper"), *PS_FUNC_LINE);
-		return false;
-	}
-
-	if (ServerWrapper->Server == nullptr)
-	{
-		UE_LOG(LogPwsAll, Error, TEXT("%s: Can't bind hadler: you should run server first"), *PS_FUNC_LINE);
-		return false;
-	}
-
-	if (URI.IsEmpty())
-	{
-		UE_LOG(LogPwsAll, Error, TEXT("%s: Can't bind hadler: URI is empty"), *PS_FUNC_LINE);
-		return false;
-	}
+	check(InServer);
+	check(ServerImpl);
+	check(!URI.IsEmpty());
 
 	// Cache ServerWrapper pointer and its URI (it's reqired by UPsWebServerHandler::BeginDestroy())
 	HandlerURI = URI;
-	Wrapper = ServerWrapper;
+	Server = InServer;
 
 	// Cache request timeout from config
 	const UPsWebServerSettings* ServerSettings = FPsWebServerModule::Get().GetSettings();
-	Handler.RequestTimeout = ServerSettings->RequestTimeout;
+	Impl->RequestTimeout = ServerSettings->RequestTimeout;
 
 	// Bind handler to civet server internal instance
-	Handler.OwnerHandler = (const_cast<UPsWebServerHandler*>(this));
-	ServerWrapper->Server->addHandler(TCHAR_TO_ANSI(*HandlerURI), Handler);
+	Impl->OwnerHandler = this;
+	ServerImpl->addHandler(TCHAR_TO_ANSI(*HandlerURI), Impl.Get());
 
 	// Set as binned
 	bHandlerBinned = true;
@@ -238,4 +162,60 @@ bool UPsWebServerHandler::BindHandler(UPsWebServerWrapper* ServerWrapper, const 
 
 	return false;
 #endif // WITH_CIVET
+}
+
+void UPsWebServerHandler::SetRequestOnNextTick(const FGuid& RequestId, FString RequestData, const FPsWebCancellationTokenRef& InCancellationToken)
+{
+	UE_LOG(LogPwsAll, Verbose, TEXT("%s: request id %s"), *PS_FUNC_LINE, *RequestId.ToString());
+
+	const auto World = GetWorld();
+	check(World);
+
+	ScheduledRequests.Add(RequestId);
+
+	const auto OnNextTick = FTimerDelegate::CreateWeakLambda(this, [this, RequestId, RequestData = MoveTemp(RequestData), InCancellationToken] {
+		ScheduledRequests.Remove(RequestId);
+		OnRequest(RequestId, RequestData, InCancellationToken);
+	});
+
+	auto& TimerManager = World->GetTimerManager();
+	TimerManager.SetTimerForNextTick(OnNextTick);
+}
+
+void UPsWebServerHandler::OnRequest(const FGuid& RequestId, const FString& RequestData, const FPsWebCancellationTokenRef& InCancellationToken)
+{
+	UE_LOG(LogPwsAll, Verbose, TEXT("%s: request id '%s'"), *PS_FUNC_LINE, *RequestId.ToString());
+
+	check(!bProcessing);
+	bProcessing = true;
+	bAborted = false;
+	CancellationTokenPtr = InCancellationToken;
+
+	if (CancellationTokenPtr->IsCanceled())
+	{
+		UE_LOG(LogPwsAll, Error, TEXT("%s: request was already canceled"), *PS_FUNC_LINE);
+		ProcessRequestFinish(RequestId, FString{});
+		return;
+	}
+
+	ProcessRequest(RequestId, RequestData);
+
+	if (IsProcessing())
+	{
+		UE_LOG(LogPwsAll, Error, TEXT("%s: async handlers is not allowed"), *PS_FUNC_LINE);
+		AbortAsyncRequest(RequestId);
+	}
+}
+
+void UPsWebServerHandler::AbortAsyncRequest(const FGuid& RequestId)
+{
+	UE_LOG(LogPwsAll, Warning, TEXT("%s: request id %s"), *PS_FUNC_LINE, *RequestId.ToString());
+
+	check(!bAborted);
+	check(bProcessing);
+
+	const auto Response = GetAbortAsyncResponse();
+	ProcessRequestFinish(RequestId, Response);
+
+	bAborted = true;
 }

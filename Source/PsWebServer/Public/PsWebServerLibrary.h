@@ -6,14 +6,15 @@
 
 #include "PsWebServerLibrary.generated.h"
 
-class UPsWebServerWrapper;
+class UPsWebServer;
 
 UCLASS()
-class UPsWebServerLibrary : public UBlueprintFunctionLibrary
+class PSWEBSERVER_API UPsWebServerLibrary : public UBlueprintFunctionLibrary
 {
-	GENERATED_UCLASS_BODY()
+	GENERATED_BODY()
 
-	/** Create new web server wrapper */
-	UFUNCTION(BlueprintPure, meta = (DisplayName = "Create Web Server Wrapper"), Category = "PsWebServer")
-	static UPsWebServerWrapper* ConstructWebServerWrapper();
+public:
+	/** Create a new web server instance */
+	UFUNCTION(BlueprintCallable, meta = (WorldContext = "WorldContextObject", DisplayName = "Create Web Server"), Category = "PsWebServer")
+	static UPsWebServer* ConstructWebServer(UObject* WorldContextObject);
 };

@@ -2,26 +2,21 @@
 
 #include "PsWebServerLibrary.h"
 
+#include "PsWebServer.h"
 #include "PsWebServerDefines.h"
-#include "PsWebServerWrapper.h"
 
-UPsWebServerLibrary::UPsWebServerLibrary(const FObjectInitializer& ObjectInitializer)
-	: Super(ObjectInitializer)
-{
-}
-
-UPsWebServerWrapper* UPsWebServerLibrary::ConstructWebServerWrapper()
+UPsWebServer* UPsWebServerLibrary::ConstructWebServer(UObject* WorldContextObject)
 {
 	// Slowly check we have existing instance to prevent multiple server instances
-	for (TObjectIterator<UPsWebServerWrapper> It; It; ++It)
+	for (TObjectIterator<UPsWebServer> It; It; ++It)
 	{
-		UPsWebServerWrapper* CurrentWrapper = *It;
-		if (CurrentWrapper->IsValidLowLevel())
+		UPsWebServer* Current = *It;
+		if (Current->IsValidLowLevel())
 		{
 			UE_LOG(LogPwsAll, Error, TEXT("%s: Existing server wrapper is found. Please check you're using it right."), *PS_FUNC_LINE);
-			return CurrentWrapper;
+			return Current;
 		}
 	}
 
-	return NewObject<UPsWebServerWrapper>();
+	return NewObject<UPsWebServer>(WorldContextObject);
 }

@@ -2,106 +2,114 @@
 
 #pragma once
 
-#if WITH_CIVET
-#include "CivetServer.h"
-#endif
+#include "PsWebServerCancellationToken.h"
 
 #include "CoreMinimal.h"
 
 #include "PsWebServerHandler.generated.h"
 
-class UPsWebServerHandler;
-class UPsWebServerWrapper;
+class UPsWebServer;
+class CivetServer;
+class FPsWebServerHandlerImpl;
 
-#if WITH_CIVET
-
-/**
- * Native C++ wrapper to connect civet and ue4 
- */
-class PSWEBSERVER_API WebServerHandler : public CivetHandler
-{
-public:
-	WebServerHandler();
-
-	bool handlePost(CivetServer* server, struct mg_connection* conn);
-	bool handleGet(CivetServer* server, struct mg_connection* conn);
-
-	void ProcessRequest(const FGuid& RequestUniqueId, const FString& RequestData);
-	bool SetResponseData(const FGuid& RequestUniqueId, const FString& ResponseData);
-
-	void SetHeader(const FString& HeaderName, const FString& HeaderValue);
-
-public:
-	/** Timeout in msec for the entire http request to complete (see UPsWebServerSettings::RequestTimeout)*/
-	TAtomic<int32> RequestTimeout;
-
-	/** Parent processing object that lives in GameThread */
-	TWeakObjectPtr<UPsWebServerHandler> OwnerHandler;
-
-private:
-	/** Critical section used to lock the request data for access */
-	FCriticalSection CriticalSection;
-
-	/** Internal container for cached response data from game thread */
-	TMap<FGuid, FString> ResponseDatas;
-
-	/** Internal container for cached event triggers */
-	TMap<FGuid, FEvent*> RequestReadyEvents;
-
-	/** Request headers that will be added to the response */
-	TMap<FString, FString> ResponseHeaders;
-
-	/** Request headers cached as a string */
-	FString CachedResponseHeaders;
-
-private:
-	FString PrintHeadersToString(const TMap<FString, FString>& Headers);
-};
-
-#endif // WITH_CIVET
-
+/** Handler of POST requests on the specific URI */
 UCLASS(Blueprintable, BlueprintType)
 class PSWEBSERVER_API UPsWebServerHandler : public UObject
 {
 	GENERATED_BODY()
 
 public:
+	UPsWebServerHandler();
+
 	//~ Begin UObject Interface
 	virtual void BeginDestroy() override;
 	//~ End UObject Interface
 
 	/** Override it with custom processing logic */
 	UFUNCTION(BlueprintNativeEvent, Category = "PsWebServer|Handler")
-	void ProcessRequest(const FGuid& RequestUniqueId, const FString& RequestData);
+	void ProcessRequest(const FGuid& RequestId, const FString& RequestData);
 
-	/** Override it if you want to have any data validation level */
-	UFUNCTION(BlueprintNativeEvent, Category = "PsWebServer|Handler")
-	bool SetResponseData(const FGuid& RequestUniqueId, const FString& ResponseData);
+	/** Finish request processing with given response data */
+	UFUNCTION(BlueprintCallable, Category = "PsWebServer|Handler")
+	void ProcessRequestFinish(const FGuid& RequestId, const FString& ResponseData);
+
+	/** Whether the current request is cancelled */
+	UFUNCTION(BlueprintCallable, Category = "PsWebServer|Handler")
+	bool IsCancelled() const;
+
+	/** Whether the request is in processing */
+	UFUNCTION(BlueprintPure, Category = "PsWebServer|Handler")
+	bool IsProcessing() const;
+
+	/** Whether the current request is aborted */
+	UFUNCTION(BlueprintPure, Category = "PsWebServer|Handler")
+	bool IsAborted() const;
 
 	/** Sets optional header info (should be global for handler) */
 	UFUNCTION(BlueprintCallable, Category = "PsWebServer|Handler")
 	void SetHeader(const FString& HeaderName, const FString& HeaderValue);
 
-	/** Get HandlerURI value */
-	UFUNCTION(BlueprintCallable, Category = "PsWebServer")
+	/** Get header value for given request id */
+	UFUNCTION(BlueprintCallable, Category = "PsWebServer|Handler")
+	FString GetHeader(const FGuid& RequestId, const FString& HeaderName) const;
+
+	/** Get handler URI value */
+	UFUNCTION(BlueprintPure, Category = "PsWebServer")
 	FString GetURI() const;
 
-	/** Called from wrapped to bind handler to server */
-	bool BindHandler(UPsWebServerWrapper* ServerWrapper, const FString& URI);
+protected:
+	/** Get cancellation token */
+	FPsWebCancellationTokenRef GetCancellationToken() const;
+
+	/** Get error response in case of async handler */
+	virtual FString GetAbortAsyncResponse() const;
+
+	/** (Called not from the game thread!) Get error response in case of timeout */
+	virtual FString GetTimeoutResponse() const;
 
 private:
+	friend UPsWebServer;
+
+	/** Called from wrapped to bind handler to server */
+	bool BindHandler(UPsWebServer* Server, const FString& URI, CivetServer* ServerImpl);
+
 	/** Cached handler URI */
 	FString HandlerURI;
 
 	/** Weak pointer to server used for handler binding */
-	TWeakObjectPtr<UPsWebServerWrapper> Wrapper;
+	TWeakObjectPtr<UPsWebServer> Server;
 
 	/** Internal binned status */
 	bool bHandlerBinned;
 
+	/** Processing in progress flag */
+	bool bProcessing;
+
+	/** Aborted flag */
+	bool bAborted;
+
+	/** Cancellation token */
+	FPsWebCancellationTokenPtr CancellationTokenPtr;
+
 #if WITH_CIVET
-private:
-	/** Interlal civet-based handler for uri */
-	WebServerHandler Handler;
+	/** Pointer to the internal civet-based handler type */
+	using FPimpl = TSharedPtr<FPsWebServerHandlerImpl>;
+
+	/** Pointer to the internal civet-based handler instance for uri */
+	FPimpl Impl;
+
+	friend FPsWebServerHandlerImpl;
 #endif // WITH_CIVET
+
+	/** Set request processing on the next tick */
+	void SetRequestOnNextTick(const FGuid& RequestId, FString RequestData, const FPsWebCancellationTokenRef& CancellationToken);
+
+	/** Start request processing */
+	void OnRequest(const FGuid& RequestId, const FString& RequestData, const FPsWebCancellationTokenRef& CancellationToken);
+
+	/** Abort async request processing */
+	void AbortAsyncRequest(const FGuid& RequestId);
+
+	/** Scheduled requests */
+	TSet<FGuid> ScheduledRequests;
 };
