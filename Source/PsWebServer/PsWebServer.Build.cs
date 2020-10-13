@@ -1,4 +1,4 @@
-// Copyright 2015-2019 Mail.Ru Group. All Rights Reserved.
+// Copyright 2015-2020 Mail.Ru Group. All Rights Reserved.
 
 using UnrealBuildTool;
 using System.IO;
@@ -32,6 +32,7 @@ public class PsWebServer : ModuleRules
         if (Target.Platform == UnrealTargetPlatform.Win64)
         {
             PublicDefinitions.Add("WITH_CIVET=1");
+            PublicDefinitions.Add("OPENSSL_API_1_0");
             bEnableExceptions = true;
 
             PrivateIncludePaths.AddRange(
@@ -53,6 +54,7 @@ public class PsWebServer : ModuleRules
         else if (Target.Platform == UnrealTargetPlatform.Mac)
         {
             PublicDefinitions.Add("WITH_CIVET=1");
+            PublicDefinitions.Add("OPENSSL_API_1_0");
             bEnableExceptions = true;
 
             PrivateIncludePaths.AddRange(
@@ -74,6 +76,7 @@ public class PsWebServer : ModuleRules
         else if (Target.Platform == UnrealTargetPlatform.Linux)
         {
             PublicDefinitions.Add("WITH_CIVET=1");
+            PublicDefinitions.Add("OPENSSL_API_1_0");
             bEnableExceptions = true;
 
             PrivateIncludePaths.AddRange(

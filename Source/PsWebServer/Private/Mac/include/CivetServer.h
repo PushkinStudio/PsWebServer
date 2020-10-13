@@ -8,8 +8,8 @@
 
 // .c file is specific so we can't include PsWebServerDefines.h here
 
-#ifndef _CIVETWEB_SERVER_H_
-#define _CIVETWEB_SERVER_H_
+#ifndef CIVETSERVER_HEADER_INCLUDED
+#define CIVETSERVER_HEADER_INCLUDED
 #ifdef __cplusplus
 
 #include "civetweb.h"
@@ -249,7 +249,7 @@ class CIVETWEB_CXX_API CivetServer
 	CivetServer(const char **options,
 	            const struct CivetCallbacks *callbacks = 0,
 	            const void *UserContext = 0);
-	CivetServer(std::vector<std::string> options,
+	CivetServer(const std::vector<std::string> &options,
 	            const struct CivetCallbacks *callbacks = 0,
 	            const void *UserContext = 0);
 
@@ -587,15 +587,11 @@ class CIVETWEB_CXX_API CivetServer
 	class CivetConnection
 	{
 	  public:
-		char *postData;
-		unsigned long postDataLen;
-
-		CivetConnection();
-		~CivetConnection();
+		std::vector<char> postData;
 	};
 
 	struct mg_context *context;
-	std::map<struct mg_connection *, class CivetConnection> connections;
+	std::map<const struct mg_connection *, CivetConnection> connections;
 
 	// generic user context which can be set/read,
 	// the server does nothing with this apart from keep it.
@@ -650,4 +646,4 @@ class CIVETWEB_CXX_API CivetServer
 };
 
 #endif /*  __cplusplus */
-#endif /* _CIVETWEB_SERVER_H_ */
+#endif /* CIVETSERVER_HEADER_INCLUDED */
