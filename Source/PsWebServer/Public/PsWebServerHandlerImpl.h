@@ -16,7 +16,6 @@
 #include "Misc/Guid.h"
 #include "Templates/Atomic.h"
 #include "Templates/SharedPointer.h"
-#include "UObject/WeakObjectPtr.h"
 
 class UPsWebServerHandler;
 

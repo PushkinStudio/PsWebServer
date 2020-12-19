@@ -9,6 +9,7 @@
 
 #include "Engine/Engine.h"
 #include "Engine/World.h"
+#include "TimerManager.h"
 
 #if WITH_CIVET
 #include "CivetServer.h"

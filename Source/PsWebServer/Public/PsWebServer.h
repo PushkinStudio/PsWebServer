@@ -3,7 +3,7 @@
 #pragma once
 
 #include "CoreUObject.h"
-#include "TimerManager.h"
+#include "Engine/EngineTypes.h"
 
 #include "PsWebServer.generated.h"
 
