@@ -109,7 +109,7 @@ FString FPsWebServerHandlerImpl::GetHeader(const FGuid& RequestId, const FString
 	const auto& Context = *ContextPtr;
 
 	const auto RequestConnection = Context.Connection;
-	std::string HeaderNameStd = std::string(TCHAR_TO_UTF8(*HeaderName));
+	const std::string HeaderNameStd = std::string(TCHAR_TO_UTF8(*HeaderName));
 
 	const auto ValueCStr = CivetServer::getHeader(RequestConnection, HeaderNameStd);
 	return FString{ValueCStr};
@@ -146,7 +146,7 @@ bool FPsWebServerHandlerImpl::WaitForResponse(mg_connection* RequestConnection, 
 	const bool bTimeout = !bEventTriggered;
 	UE_LOG(LogPwsAll, Verbose, TEXT("%s: request id %s: wait is over: timeout %d"), *PS_FUNC_LINE, *RequestId.ToString(), static_cast<int32>(bTimeout));
 
-	FString ResponseData = GetResponseData(RequestId, bTimeout);
+	const FString ResponseData = GetResponseData(RequestId, bTimeout);
 
 	const FString StatusCode = !bTimeout ? TEXT("200 OK") : TEXT("503 Service Unavailable");
 

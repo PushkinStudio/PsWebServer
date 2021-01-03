@@ -443,7 +443,7 @@ FString GetPostData(mg_connection* RequestConnection)
 		}
 
 		const ANSICHAR* Ptr = Buffer;
-		TCHAR Char = Impl::CodepointFromUtf8(Ptr, BytesCount);
+		const TCHAR Char = Impl::CodepointFromUtf8(Ptr, BytesCount);
 
 		// Calculate unhandled bytes count
 		const uint8 HandledBytesCount = Ptr - Buffer;
