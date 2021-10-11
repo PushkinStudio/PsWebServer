@@ -39,5 +39,5 @@ public:
 
 private:
 	/** Holds the kit settings */
-	UPsWebServerSettings* WebServerSettings;
+	UPsWebServerSettings* WebServerSettings = nullptr;
 };
