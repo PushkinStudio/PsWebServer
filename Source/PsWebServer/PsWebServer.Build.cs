@@ -77,6 +77,7 @@ public class PsWebServer : ModuleRules
         {
             PublicDefinitions.Add("WITH_CIVET=1");
             PublicDefinitions.Add("OPENSSL_API_1_0");
+            //PublicDefinitions.Add("USE_ZLIB");
             bEnableExceptions = true;
 
             PrivateIncludePaths.AddRange(

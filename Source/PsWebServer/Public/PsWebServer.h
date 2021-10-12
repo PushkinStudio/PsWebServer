@@ -59,14 +59,14 @@ private:
 
 #if WITH_CIVET
 private:
-	/** Pointer to the native CivetWeb implemetation type */
+	/** Pointer to the native CivetWeb implementation type */
 	struct CivetServerDeleter
 	{
 		void operator()(CivetServer*) const;
 	};
 	using FPimpl = TUniquePtr<CivetServer, CivetServerDeleter>;
 
-	/** Pointer to the native CivetWeb implemetation instance */
+	/** Pointer to the native CivetWeb implementation instance */
 	FPimpl Impl;
 #endif
 };
