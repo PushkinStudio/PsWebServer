@@ -32,7 +32,7 @@ class UPsWebServerSettings : public UObject
 	UPROPERTY(Config, EditAnywhere, Category = "Server Settings", meta = (ClampMin = 0, ClampMax = 60000))
 	int32 RequestTimeout;
 
-	/** Number of worker threads. CivetWeb handles each incoming connection in a separate thread. Therefore, 
+	/** Number of worker threads. CivetWeb handles each incoming connection in a separate thread. Therefore,
 	 * the value of this option is effectively the number of concurrent HTTP connections CivetWeb can handle. */
 	UPROPERTY(Config, EditAnywhere, Category = "Server Settings", meta = (ClampMin = 1, ClampMax = 250))
 	int32 NumTreads;
