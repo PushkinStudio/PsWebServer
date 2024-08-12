@@ -28,6 +28,9 @@ public:
 	FPsWebServerHandlerImpl();
 
 	/** Handle POST requests */
+	virtual bool handleGet(CivetServer* Server, mg_connection* RequestConnection) override;
+	
+	/** Handle POST requests */
 	virtual bool handlePost(CivetServer* Server, mg_connection* RequestConnection) override;
 
 	/** Processing finish callback */

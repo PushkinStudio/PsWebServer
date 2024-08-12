@@ -29,13 +29,44 @@ FPsWebServerHandlerImpl::FPsWebServerHandlerImpl()
 	CachedResponseHeaders = PrintHeadersToString(ResponseHeaders);
 }
 
+bool FPsWebServerHandlerImpl::handleGet(CivetServer* Server, mg_connection* RequestConnection)
+{
+	const FGuid RequestId = FGuid::NewGuid();
+
+	const auto Handler = OwnerHandler.Load();
+	if (!Handler || Handler == nullptr)
+	{
+		const FString StatusCode = TEXT("503 Service Unavailable");
+		const FString ResponseData = TEXT("Request handler is not valid");
+		return SendResponse(RequestConnection, RequestId, StatusCode, ResponseData);
+	}
+
+	// Create cancellation source
+	auto CancellationSource = FPsWebCancellationSource{};
+	const auto CancellationToken = CancellationSource.GetToken();
+
+	FEvent* const RequestReadyEvent = CreateContext(RequestConnection, RequestId, MoveTemp(CancellationSource));
+	FString PostData = PsWebServerUtils::GetPostData(RequestConnection);
+	
+	FString UeBuf(mg_get_request_info(RequestConnection)->query_string);
+
+	// Set request processing on the game thread
+	DECLARE_DELEGATE(FTaskDelegate);
+	auto TaskDelegate = FTaskDelegate::CreateWeakLambda(Handler, [Handler, RequestId, PostData = MoveTemp(UeBuf), CancellationToken]() mutable {
+		Handler->SetRequestOnNextTick(RequestId, MoveTemp(PostData), CancellationToken);
+	});
+	AsyncTask(ENamedThreads::GameThread, [TaskDelegate = MoveTemp(TaskDelegate)] { TaskDelegate.Execute(); });
+
+	return WaitForResponse(RequestConnection, RequestReadyEvent, RequestId);
+}
+
 bool FPsWebServerHandlerImpl::handlePost(CivetServer* Server, mg_connection* RequestConnection)
 {
 	// Unique request id
 	const FGuid RequestId = FGuid::NewGuid();
 
 	const auto Handler = OwnerHandler.Load();
-	if (!Handler || Handler->IsPendingKill())
+	if (!Handler || Handler == nullptr)
 	{
 		const FString StatusCode = TEXT("503 Service Unavailable");
 		const FString ResponseData = TEXT("Request handler is not valid");
@@ -166,7 +197,7 @@ FString FPsWebServerHandlerImpl::GetResponseData(const FGuid& RequestId, bool bT
 		Context.CancellationSource.Cancel();
 
 		const auto Handler = OwnerHandler.Load();
-		if (Handler && !Handler->IsPendingKill())
+		if (Handler && Handler == nullptr)
 		{
 			return Handler->GetTimeoutResponse();
 		}
